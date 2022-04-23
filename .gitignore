@@ -1,0 +1,5 @@
+*.pth
+*.onnx
+.ipynb_checkpoints
+sg_food/
+*.zip

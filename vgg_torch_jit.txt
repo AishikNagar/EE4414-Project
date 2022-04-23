@@ -1,0 +1,5 @@
+selected classes:
+    id: [3, 5, 7, 8, 9]
+    name: ['Hokkien Prawn Mee', 'Laksa', 'Oyster Omelette', 'Roast Meat Rice', 'Roti Prata']
+Time taken to load dataset:
+0.00012087821960449219

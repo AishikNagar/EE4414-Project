@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+	<!-- Required meta tags -->
+	<meta charset="utf-8" name="viewport" content="width=device-width, initial-scale=1">
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet"
+		integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+
+	<title>EE4414 Project Demo- Team 4</title>
+</head>
+
+<body>
+	<!-- As a heading -->
+	<nav class="navbar navbar-dark bg-dark">
+		<div class="container-fluid">
+			<span class="navbar-brand mb-0 h1">Sg Food Classifier</span>
+		</div>
+	</nav>
+	<br />
+	<h1 class="col-md-8 offset-md-2 rounded">EE4414 Demo - Team 4 Group F31</h1>
+	<br />
+	
+		<div class="mt-4 p-5 bg-light w-75 col-md-8 offset-md-2 rounded">
+
+			<h4>VGG16 ONNX Based Classifier</h4>
+			<br />
+
+			<form onsubmit="showImage()" id ="imgForm" method="post" action="/" enctype="multipart/form-data">
+				<div class="mb-3">
+					<!-- <dl> -->
+					<!-- <p> -->
+					<label for="inputImage">Input Image</label>
+					<br />
+					<input id="inputImage" type="file" name="file" autocomplete="off" required>
+					<br />
+					<div id="imgHelp" class="form-text">Our model can classify 5 different types of food items found in
+						Singapore</div>
+					<!-- </p> -->
+					<!-- </dl> -->
+					<br />
+					<br />
+					<div id="sampleImgHelp" class="form-text">Don't have images to classify? Download a sample image by clicking the button below:</div>
+					<button><a href="../static/Roti_Prata.jpg" download="Roti_Prata.jpg">Download Demo Image</a></button>
+				</div>
+				<br />
+				<br />
+				<button>
+					<input type="submit" value="Submit">
+				</button>
+			</form>
+			<!-- <img id="image" /> -->
+		</div>
+
+		<div class="mt-4 p-5 bg-light col-md-8 offset-md-2 rounded w-75">
+			<!-- <h4 id="uploaded_text" class="form-text">Uploaded Image:</h4>
+			<img class="img-fluid" id="image" alt="Uploaded Img"> -->
+			
+				{% with messages = get_flashed_messages() %}
+				{% if messages %}
+				<h4 class="form-text">Predicted Label:</h4>
+				<h6>{{ messages[0] }}</h6>
+				<br />
+				<br />
+				<h4 class="form-text">Inference Time:</h4>
+				<h6>{{ messages[1] }} seconds</h6>
+				<br />
+				<h4 class="form-text">Uploaded Image:</h4>
+				<img class="img-fluid" src="{{url_for('static', filename='uploaded_img.jpg')}}">
+				<!-- <img src='{{ url_for("static", filename="Roti_prata.jpg")}} alt="Food Img"> -->
+				{% endif %}
+				{% endwith %}
+			
+		</div>
+	
+	<!-- <script src="{{ url_for('static', filename='index.js')}}"></script> -->
+
+	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"
+		integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p"
+		crossorigin="anonymous"></script>
+</body>
+
+</html>

@@ -1,0 +1,22 @@
+# runtime: python37
+runtime: python
+instance_class: F4_1G
+env: flex
+runtime_config:
+    python_version: 3.7
+
+entrypoint: gunicorn -b :$PORT main:app
+
+# manual_scaling:
+#     instances: 1
+
+readiness_check:
+    failure_threshold: 10
+    success_threshold: 1
+    app_start_timeout_sec: 1800
+
+resources:
+    cpu: 4
+    memory_gb: 6
+    disk_size_gb: 12
+

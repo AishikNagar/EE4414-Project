@@ -1,0 +1,74 @@
+selected classes:
+    id: [3, 5, 7, 8, 9]
+    name: ['Hokkien Prawn Mee', 'Laksa', 'Oyster Omelette', 'Roast Meat Rice', 'Roti Prata']
+Time taken to load dataset:
+0.0001304149627685547
+Training model....
+Epoch 0/9
+----------
+train Loss: 1.2232 Acc: 0.4680
+val Loss: 0.6841 Acc: 0.7400
+Time:5.9880211353302
+
+Epoch 1/9
+----------
+train Loss: 0.8613 Acc: 0.7020
+val Loss: 0.5937 Acc: 0.8333
+Time:2.4106709957122803
+
+Epoch 2/9
+----------
+train Loss: 0.8706 Acc: 0.7640
+val Loss: 0.6347 Acc: 0.7800
+Time:2.390655755996704
+
+Epoch 3/9
+----------
+train Loss: 0.6967 Acc: 0.7900
+val Loss: 0.4365 Acc: 0.8400
+Time:2.3727831840515137
+
+Epoch 4/9
+----------
+train Loss: 0.7223 Acc: 0.7580
+val Loss: 0.4860 Acc: 0.8533
+Time:2.4081833362579346
+
+Epoch 5/9
+----------
+train Loss: 0.7657 Acc: 0.7840
+val Loss: 0.6970 Acc: 0.7867
+Time:2.391641616821289
+
+Epoch 6/9
+----------
+train Loss: 0.7476 Acc: 0.7800
+val Loss: 0.6405 Acc: 0.7933
+Time:2.370283842086792
+
+Epoch 7/9
+----------
+train Loss: 0.7569 Acc: 0.7640
+val Loss: 0.4876 Acc: 0.8200
+Time:2.370166778564453
+
+Epoch 8/9
+----------
+train Loss: 0.6078 Acc: 0.8220
+val Loss: 0.4664 Acc: 0.8400
+Time:2.3899500370025635
+
+Epoch 9/9
+----------
+train Loss: 0.6475 Acc: 0.7940
+val Loss: 0.4683 Acc: 0.8267
+Time:2.4131290912628174
+
+Training complete in 0m 28s
+Best val Acc: 0.853333
+Testing....
+Evaluation
+----------
+Eval time...
+3.98268723487854
+Testing Acc: 0.8258

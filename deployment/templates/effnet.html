@@ -1,0 +1,1399 @@
+<html>
+
+<head>
+  <!-- Required meta tags -->
+  <meta charset="utf-8" name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet"
+    integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+
+  <title>EE4414 Project Demo- Effnet</title>
+
+  <style>
+    body {
+      color: black;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- As a heading -->
+  <nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="#">Sg Food Classifier</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <li class="nav-item">
+            <a class="nav-link active" aria-current="page" href="/">Home</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/effnet">EffNet Experiment</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/resnet">ResNet Experiment</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/stacking">Model Stacking Experiment</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/onnx">Performance Optimization using ONNX</a>
+          </li>
+
+        </ul>
+      </div>
+    </div>
+  </nav>
+  <br />
+  <h1 id="ee4414-team-practice">EE4414 Team Practice</h1>
+  <p>In this team practice, you will design Convolutional Neural Network(s) to classify food images.</p>
+  <pre><code class="lang-python"><span class="hljs-tag">%<span class="hljs-selector-tag">matplotlib</span></span> inline
+</code></pre>
+  <pre><code class="lang-python">from __future__ <span class="hljs-keyword">import</span> print_function, division
+
+<span class="hljs-keyword">import</span> torch
+<span class="hljs-keyword">import</span> torch.nn <span class="hljs-keyword">as</span> nn
+<span class="hljs-keyword">import</span> torch.optim <span class="hljs-keyword">as</span> optim
+from torch.optim <span class="hljs-keyword">import</span> lr_scheduler
+<span class="hljs-keyword">import</span> numpy <span class="hljs-keyword">as</span> np
+<span class="hljs-keyword">import</span> torchvision
+from torchvision <span class="hljs-keyword">import</span> models, transforms
+from torchvision.datasets.folder <span class="hljs-keyword">import</span> make_dataset
+from PIL <span class="hljs-keyword">import</span> Image
+<span class="hljs-keyword">import</span> matplotlib.pyplot <span class="hljs-keyword">as</span> plt
+<span class="hljs-keyword">import</span> <span class="hljs-built_in">time</span>
+<span class="hljs-keyword">import</span> os
+<span class="hljs-keyword">import</span> copy
+
+
+plt.ion()   # interactive mode
+</code></pre>
+  <pre><code>&lt;<span class="hljs-selector-tag">matplotlib</span><span class="hljs-selector-class">.pyplot</span><span class="hljs-selector-class">._IonContext</span> <span class="hljs-selector-tag">at</span> 0<span class="hljs-selector-tag">x7f0054771490</span>&gt;
+</code></pre>
+  <h2 id="1-loading-data">1. Loading data</h2>
+  <p>Define the dataset, dataloader, and the data augmentation pipeline.</p>
+  <p>The code below loads 5 classes from all 12 classes in the dataset. You need to modify it to load only the classes
+    that you need.</p>
+  <p><strong><em>Note: For correctly assessing your code, do not change the file structure of the dataset. Use Pytorch
+        data loading utility (<code>torch.utils.data</code>) for customizing your dataset.</em></strong></p>
+  <pre><code class="lang-python"><span class="hljs-comment"># Define the dataset class</span>
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">sg_food_dataset</span>(<span class="hljs-title">torch</span>.<span class="hljs-title">utils</span>.<span class="hljs-title">data</span>.<span class="hljs-title">dataset</span>.<span class="hljs-title">Dataset</span>):</span>
+    <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">__init__</span><span class="hljs-params">(<span class="hljs-keyword">self</span>, root, class_id, transform=None)</span></span>:
+        <span class="hljs-keyword">self</span>.class_id = class_id
+        <span class="hljs-keyword">self</span>.root = root
+        all_classes = sorted(entry.name <span class="hljs-keyword">for</span> entry <span class="hljs-keyword">in</span> os.scandir(root) <span class="hljs-keyword">if</span> entry.is_dir())
+        <span class="hljs-keyword">if</span> <span class="hljs-keyword">not</span> <span class="hljs-symbol">all_classes:</span>
+            raise FileNotFoundError(f<span class="hljs-string">"Couldn't find any class folder in {directory}."</span>)
+        <span class="hljs-keyword">self</span>.classes = [all_classes[x] <span class="hljs-keyword">for</span> x <span class="hljs-keyword">in</span> class_id]
+        <span class="hljs-keyword">self</span>.class_to_idx = {<span class="hljs-symbol">cls_name:</span> i <span class="hljs-keyword">for</span> i, cls_name <span class="hljs-keyword">in</span> enumerate(<span class="hljs-keyword">self</span>.classes)}
+
+        <span class="hljs-keyword">self</span>.samples = make_dataset(<span class="hljs-keyword">self</span>.root, <span class="hljs-keyword">self</span>.class_to_idx, extensions=(<span class="hljs-string">'jpg'</span>))
+        <span class="hljs-keyword">self</span>.transform = transform
+
+    <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">__len__</span><span class="hljs-params">(<span class="hljs-keyword">self</span>)</span></span>:
+        <span class="hljs-keyword">return</span> len(<span class="hljs-keyword">self</span>.samples)
+
+    <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">__getitem__</span><span class="hljs-params">(<span class="hljs-keyword">self</span>, idx)</span></span>:
+        path, target = <span class="hljs-keyword">self</span>.samples[idx]
+        with open(path, <span class="hljs-string">"rb"</span>) as <span class="hljs-symbol">f:</span>
+            sample = Image.open(f).convert(<span class="hljs-string">'RGB'</span>)
+        <span class="hljs-keyword">if</span> <span class="hljs-keyword">self</span>.transform is <span class="hljs-keyword">not</span> <span class="hljs-symbol">None:</span>
+            sample = <span class="hljs-keyword">self</span>.transform(sample)
+        <span class="hljs-keyword">return</span> sample, target
+</code></pre>
+  <pre><code class="lang-python"><span class="hljs-comment"># Data augmentation and normalization for training</span>
+data_transforms = {
+    <span class="hljs-string">'train'</span>: transforms.Compose([
+        <span class="hljs-comment"># Define data preparation operations for training set here.</span>
+        <span class="hljs-comment"># Tips: Use torchvision.transforms</span>
+        <span class="hljs-comment">#       https://pytorch.org/vision/stable/transforms.html</span>
+        <span class="hljs-comment">#       Normally this should at least contain resizing (Resize) and data format converting (ToTensor).</span>
+        transforms.RandomResizedCrop(<span class="hljs-number">224</span>),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        transforms.Normalize([<span class="hljs-number">0.485</span>, <span class="hljs-number">0.456</span>, <span class="hljs-number">0.406</span>], [<span class="hljs-number">0.229</span>, <span class="hljs-number">0.224</span>, <span class="hljs-number">0.225</span>]) <span class="hljs-comment"># ImageNet prior</span>
+    ]),
+    <span class="hljs-string">'val'</span>: transforms.Compose([
+        <span class="hljs-comment"># Define data preparation operations for testing/validation set here.</span>
+        transforms.Resize(<span class="hljs-number">256</span>),
+        transforms.CenterCrop(<span class="hljs-number">224</span>),
+        transforms.ToTensor(),
+        transforms.Normalize([<span class="hljs-number">0.485</span>, <span class="hljs-number">0.456</span>, <span class="hljs-number">0.406</span>], [<span class="hljs-number">0.229</span>, <span class="hljs-number">0.224</span>, <span class="hljs-number">0.225</span>]) <span class="hljs-comment"># ImageNet prior</span>
+    ]),
+}
+
+data_dir = os.path.join(<span class="hljs-string">'./'</span>, <span class="hljs-string">'sg_food'</span>)
+subfolder = {<span class="hljs-string">'train'</span>: <span class="hljs-string">'train'</span>, <span class="hljs-string">'val'</span>: <span class="hljs-string">'val'</span>}
+
+<span class="hljs-comment"># Define the dataset</span>
+selected_classes = [<span class="hljs-number">3</span>,<span class="hljs-number">5</span>,<span class="hljs-number">7</span>,<span class="hljs-number">8</span>,<span class="hljs-number">9</span>]
+n_classes = len(selected_classes)
+image_datasets = {x: sg_food_dataset(root=os.path.join(data_dir, subfolder[x]),
+                                     class_id=selected_classes,
+                                     transform=data_transforms[x]) 
+                  <span class="hljs-keyword">for</span> x <span class="hljs-keyword">in</span> [<span class="hljs-string">'train'</span>, <span class="hljs-string">'val'</span>]}
+class_names = image_datasets[<span class="hljs-string">'train'</span>].classes
+print(<span class="hljs-string">'selected classes:\n    id: {}\n    name: {}'</span>.format(selected_classes, class_names))
+
+<span class="hljs-comment"># Define the dataloader</span>
+batch_size = <span class="hljs-number">64</span>
+dataloaders = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=batch_size,
+                                             shuffle=<span class="hljs-keyword">True</span>, num_workers=<span class="hljs-number">0</span>)
+              <span class="hljs-keyword">for</span> x <span class="hljs-keyword">in</span> [<span class="hljs-string">'train'</span>, <span class="hljs-string">'val'</span>]}
+
+dataset_sizes = {x: len(image_datasets[x]) <span class="hljs-keyword">for</span> x <span class="hljs-keyword">in</span> [<span class="hljs-string">'train'</span>, <span class="hljs-string">'val'</span>]}
+
+device = torch.device(<span class="hljs-string">"cuda:0"</span> <span class="hljs-keyword">if</span> torch.cuda.is_available() <span class="hljs-keyword">else</span> <span class="hljs-string">"cpu"</span>)
+</code></pre>
+  <pre><code>selected classes:
+    id: [<span class="hljs-number">3</span>, <span class="hljs-number">5</span>, <span class="hljs-number">7</span>, <span class="hljs-number">8</span>, <span class="hljs-number">9</span>]
+    name: [<span class="hljs-string">'Hokkien Prawn Mee'</span>, <span class="hljs-string">'Laksa'</span>, <span class="hljs-string">'Oyster Omelette'</span>, <span class="hljs-string">'Roast Meat Rice'</span>, <span class="hljs-string">'Roti Prata'</span>]
+</code></pre>
+  <h2 id="2-visualizing-the-dataset">2. Visualizing the dataset</h2>
+  <p>Fetch a batch of training data from the dataset and visualize them. </p>
+  <pre><code class="lang-python"><span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">imshow</span><span class="hljs-params">(inp, title=None)</span>:</span>
+    <span class="hljs-string">"""Imshow for Tensor."""</span>
+    inp = inp.numpy().transpose((<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">0</span>))
+    mean = np.array([<span class="hljs-number">0.485</span>, <span class="hljs-number">0.456</span>, <span class="hljs-number">0.406</span>])
+    std = np.array([<span class="hljs-number">0.229</span>, <span class="hljs-number">0.224</span>, <span class="hljs-number">0.225</span>])
+    inp = std * inp + mean
+    inp = np.clip(inp, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>)
+    plt.imshow(inp)
+    <span class="hljs-keyword">if</span> title <span class="hljs-keyword">is</span> <span class="hljs-keyword">not</span> <span class="hljs-keyword">None</span>:
+        plt.title(title)
+    plt.pause(<span class="hljs-number">0.001</span>)  <span class="hljs-comment"># pause a bit so that plots are updated</span>
+
+
+<span class="hljs-comment"># Get a batch of training data</span>
+inputs, classes = next(iter(dataloaders[<span class="hljs-string">'train'</span>]))
+
+<span class="hljs-comment"># Make a grid from batch</span>
+out = torchvision.utils.make_grid(inputs[:<span class="hljs-number">4</span>])
+
+imshow(out, title=[class_names[x] <span class="hljs-keyword">for</span> x <span class="hljs-keyword">in</span> classes[:<span class="hljs-number">4</span>]])
+</code></pre>
+  <p><img src="output_7_0.png" alt="png"></p>
+  <h2 id="3-defining-function-to-train-the-model">3. Defining function to train the model</h2>
+  <p>Use a pre-trained CNN model with transfer learning techniques to classify the 5 food categories.</p>
+  <p>(Note: The provided code is only for reference. You can modify the code whichever way you want.)</p>
+  <pre><code class="lang-python">def train_model(model, criterion, optimizer, scheduler, num_epochs=<span class="hljs-number">24</span>):
+    since = <span class="hljs-built_in">time</span>.<span class="hljs-built_in">time</span>()
+
+    best_model_wts = copy.deepcopy(model.state_dict())
+    best_acc = <span class="hljs-number">0.0</span>
+
+    loss_list = []
+    acc_list = []
+
+    loss_list_val = []
+    acc_list_val = []
+    <span class="hljs-keyword">for</span> epoch <span class="hljs-keyword">in</span> range(num_epochs):
+        print(<span class="hljs-string">'Epoch {}/{}'</span>.<span class="hljs-built_in">format</span>(epoch, num_epochs - <span class="hljs-number">1</span>))
+        print(<span class="hljs-string">'-'</span> * <span class="hljs-number">10</span>)
+        t1 = <span class="hljs-built_in">time</span>.<span class="hljs-built_in">time</span>()
+
+        <span class="hljs-comment"># Each epoch has a training and validation phase</span>
+        <span class="hljs-keyword">for</span> phase <span class="hljs-keyword">in</span> [<span class="hljs-string">'train'</span>, <span class="hljs-string">'val'</span>]:
+            <span class="hljs-keyword">if</span> phase == <span class="hljs-string">'train'</span>:
+                model.train()  <span class="hljs-comment"># Set model to training mode</span>
+            <span class="hljs-keyword">else</span>:
+                model.eval()   <span class="hljs-comment"># Set model to evaluate mode</span>
+
+            running_loss = <span class="hljs-number">0.0</span>
+            running_corrects = <span class="hljs-number">0</span>
+
+            <span class="hljs-comment"># Iterate over data.</span>
+            <span class="hljs-keyword">for</span> inputs, labels <span class="hljs-keyword">in</span> dataloaders[phase]:
+                inputs = inputs.<span class="hljs-built_in">to</span>(device)
+                labels = labels.<span class="hljs-built_in">to</span>(device)
+
+                <span class="hljs-comment"># zero the parameter gradients</span>
+                optimizer.zero_grad()
+
+                <span class="hljs-comment"># forward</span>
+                <span class="hljs-comment"># track history if only in train</span>
+                <span class="hljs-keyword">with</span> torch.set_grad_enabled(phase == <span class="hljs-string">'train'</span>):
+                    outputs = model(inputs)
+                    _, preds = torch.<span class="hljs-built_in">max</span>(outputs, <span class="hljs-number">1</span>)
+                    loss = criterion(outputs, labels)
+
+                    <span class="hljs-comment"># backward + optimize only if in training phase</span>
+                    <span class="hljs-keyword">if</span> phase == <span class="hljs-string">'train'</span>:
+                        loss.backward()
+                        optimizer.step()
+
+                <span class="hljs-comment"># statistics</span>
+                running_loss += loss.<span class="hljs-keyword">item</span>() * inputs.size(<span class="hljs-number">0</span>)
+                running_corrects += torch.<span class="hljs-built_in">sum</span>(preds == labels.data)
+
+            <span class="hljs-keyword">if</span> phase == <span class="hljs-string">'train'</span>:
+                scheduler.step()
+
+
+            epoch_loss = running_loss / dataset_sizes[phase]
+            epoch_acc = running_corrects.double() / dataset_sizes[phase]
+
+            <span class="hljs-keyword">if</span> phase == <span class="hljs-string">'train'</span>:
+                <span class="hljs-comment">## APPEND LOSS AND ACCURACY</span>
+                loss_list.append(epoch_loss)
+                acc_list.append(epoch_acc)
+            <span class="hljs-keyword">else</span>:
+                <span class="hljs-comment">## APPEND LOSS AND ACCURACY</span>
+                loss_list_val.append(epoch_loss)
+                acc_list_val.append(epoch_acc)
+
+            print(<span class="hljs-string">'{} Loss: {:.4f} Acc: {:.4f}'</span>.<span class="hljs-built_in">format</span>(
+                phase, epoch_loss, epoch_acc))
+
+
+
+            <span class="hljs-comment"># deep copy the model</span>
+            <span class="hljs-keyword">if</span> phase == <span class="hljs-string">'val'</span> <span class="hljs-keyword">and</span> epoch_acc &gt; best_acc:
+                best_acc = epoch_acc
+                best_model_wts = copy.deepcopy(model.state_dict())
+
+        t2=<span class="hljs-built_in">time</span>.<span class="hljs-built_in">time</span>()
+        print(<span class="hljs-string">'Time:'</span>+str(t2-t1))
+        print()
+
+
+    time_elapsed = <span class="hljs-built_in">time</span>.<span class="hljs-built_in">time</span>() - since
+    print(<span class="hljs-string">'Training complete in {:.0f}m {:.0f}s'</span>.<span class="hljs-built_in">format</span>(
+        time_elapsed<span class="hljs-comment"> // 60, time_elapsed % 60))</span>
+    print(<span class="hljs-string">'Best val Acc: {:4f}'</span>.<span class="hljs-built_in">format</span>(best_acc))
+
+    <span class="hljs-comment"># load best model weights</span>
+    model.load_state_dict(best_model_wts)
+    <span class="hljs-literal">return</span> model,loss_list,acc_list,loss_list_val,acc_list_val
+</code></pre>
+  <h2 id="3-2-defining-function-to-vsualize-model">3.2 Defining Function to Vsualize Model</h2>
+  <pre><code class="lang-python">def visualize_model(model, <span class="hljs-attr">num_images=6):</span>
+    <span class="hljs-attr">was_training</span> = model.training
+    model.eval()
+    <span class="hljs-attr">images_so_far</span> = <span class="hljs-number">0</span>
+    <span class="hljs-attr">fig</span> = plt.figure()
+
+    <span class="hljs-keyword">with</span> torch.no_grad():
+        for i, (inputs, labels) <span class="hljs-keyword">in</span> enumerate(dataloaders['val']):
+            <span class="hljs-attr">inputs</span> = inputs.to(device)
+            <span class="hljs-attr">labels</span> = labels.to(device)
+
+            <span class="hljs-attr">outputs</span> = model(inputs)
+            _, <span class="hljs-attr">preds</span> = torch.max(outputs, <span class="hljs-number">1</span>)
+
+            for j <span class="hljs-keyword">in</span> range(inputs.size()[<span class="hljs-number">0</span>]):
+                images_so_far += <span class="hljs-number">1</span>
+                <span class="hljs-attr">ax</span> = plt.subplot(num_images//<span class="hljs-number">2</span>, <span class="hljs-number">2</span>, images_so_far)
+                ax.axis('off')
+                ax.set_title('predicted: {}'.format(class_names[preds[j]]))
+                imshow(inputs.cpu().data[j])
+
+                <span class="hljs-keyword">if</span> <span class="hljs-attr">images_so_far</span> == num_images:
+                    model.train(<span class="hljs-attr">mode=was_training)</span>
+                    return
+        model.train(<span class="hljs-attr">mode=was_training)</span>
+</code></pre>
+  <pre><code class="lang-python">
+</code></pre>
+  <h2 id="4-training-and-validating-the-model">4. Training and validating the model</h2>
+  <p>Train your model for minimum 3 epochs.</p>
+  <h3 id="4-1-loading-pretrained-model-and-defining-new-classfier-layer">4.1 Loading pretrained model and defining new
+    classfier layer</h3>
+  <pre><code class="lang-python"><span class="hljs-comment"># 1. Load the pretrained model and extract the intermediate features.</span>
+<span class="hljs-comment"># Tips:     Use torchvision.models</span>
+<span class="hljs-comment">#           https://pytorch.org/vision/stable/models.html#classification</span>
+
+<span class="hljs-comment"># (code)</span>
+
+<span class="hljs-attr">model</span> = models.efficientnet_b0(<span class="hljs-attr">pretrained=True)</span>
+
+<span class="hljs-comment"># 2. Modify the pretrain model for your task.</span>
+
+
+for param <span class="hljs-keyword">in</span> model.parameters():
+    param.<span class="hljs-attr">requires_grad</span> = False
+
+<span class="hljs-attr">num_ftrs</span> = model.classifier[-<span class="hljs-number">1</span>].in_features
+model.classifier[-<span class="hljs-number">1</span>] = nn.Linear(num_ftrs, <span class="hljs-number">5</span>)
+
+<span class="hljs-comment"># # (code)</span>
+
+<span class="hljs-comment"># # 3. Choose your loss function, optimizer, etc.</span>
+
+<span class="hljs-attr">criterion</span> = nn.CrossEntropyLoss()
+
+<span class="hljs-comment"># # Observe that only parameters of final layer are being optimized as</span>
+<span class="hljs-comment"># # opposed to before.</span>
+<span class="hljs-attr">optimizer_conv</span> = optim.SGD(model.classifier.parameters(), <span class="hljs-attr">lr=0.01,</span> <span class="hljs-attr">momentum=0.9)</span>
+<span class="hljs-comment"># optimizer_conv = optim.Adam(model.classifier.parameters())</span>
+
+<span class="hljs-attr">exp_lr_scheduler</span> = lr_scheduler.StepLR(optimizer_conv, <span class="hljs-attr">step_size=7,</span> <span class="hljs-attr">gamma=0.1)</span>
+<span class="hljs-comment"># (code)</span>
+</code></pre>
+  <h3 id="4-2-printing-and-visualizing-the-modified-model">4.2 Printing and visualizing the modified model</h3>
+  <pre><code class="lang-python"><span class="hljs-comment"># TODO</span>
+<span class="hljs-built_in">print</span>(model)
+</code></pre>
+  <pre><code>EfficientNet(
+  (<span class="hljs-name">features</span>): Sequential(
+    (<span class="hljs-number">0</span>): ConvNormActivation(
+      (<span class="hljs-number">0</span>): Conv2d(<span class="hljs-number">3</span>, <span class="hljs-number">32</span>, kernel_size=(<span class="hljs-number">3</span>, <span class="hljs-number">3</span>), stride=(<span class="hljs-number">2</span>, <span class="hljs-number">2</span>), padding=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), bias=False)
+      (<span class="hljs-number">1</span>): BatchNorm2d(<span class="hljs-number">32</span>, eps=1e-05, momentum=0.<span class="hljs-number">1</span>, affine=True, track_running_stats=True)
+      (<span class="hljs-number">2</span>): SiLU(<span class="hljs-name">inplace=True</span>)
+    )
+    (<span class="hljs-number">1</span>): Sequential(
+      (<span class="hljs-number">0</span>): MBConv(
+        (<span class="hljs-name">block</span>): Sequential(
+          (<span class="hljs-number">0</span>): ConvNormActivation(
+            (<span class="hljs-number">0</span>): Conv2d(<span class="hljs-number">32</span>, <span class="hljs-number">32</span>, kernel_size=(<span class="hljs-number">3</span>, <span class="hljs-number">3</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), padding=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), groups=32, bias=False)
+            (<span class="hljs-number">1</span>): BatchNorm2d(<span class="hljs-number">32</span>, eps=1e-05, momentum=0.<span class="hljs-number">1</span>, affine=True, track_running_stats=True)
+            (<span class="hljs-number">2</span>): SiLU(<span class="hljs-name">inplace=True</span>)
+          )
+          (<span class="hljs-number">1</span>): SqueezeExcitation(
+            (<span class="hljs-name">avgpool</span>): AdaptiveAvgPool2d(<span class="hljs-name">output_size=1</span>)
+            (<span class="hljs-name">fc1</span>): Conv2d(<span class="hljs-number">32</span>, <span class="hljs-number">8</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>))
+            (<span class="hljs-name">fc2</span>): Conv2d(<span class="hljs-number">8</span>, <span class="hljs-number">32</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>))
+            (<span class="hljs-name">activation</span>): SiLU(<span class="hljs-name">inplace=True</span>)
+            (<span class="hljs-name">scale_activation</span>): Sigmoid()
+          )
+          (<span class="hljs-number">2</span>): ConvNormActivation(
+            (<span class="hljs-number">0</span>): Conv2d(<span class="hljs-number">32</span>, <span class="hljs-number">16</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), bias=False)
+            (<span class="hljs-number">1</span>): BatchNorm2d(<span class="hljs-number">16</span>, eps=1e-05, momentum=0.<span class="hljs-number">1</span>, affine=True, track_running_stats=True)
+          )
+        )
+        (<span class="hljs-name">stochastic_depth</span>): StochasticDepth(<span class="hljs-name">p=0</span>.<span class="hljs-number">0</span>, mode=row)
+      )
+    )
+    (<span class="hljs-number">2</span>): Sequential(
+      (<span class="hljs-number">0</span>): MBConv(
+        (<span class="hljs-name">block</span>): Sequential(
+          (<span class="hljs-number">0</span>): ConvNormActivation(
+            (<span class="hljs-number">0</span>): Conv2d(<span class="hljs-number">16</span>, <span class="hljs-number">96</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), bias=False)
+            (<span class="hljs-number">1</span>): BatchNorm2d(<span class="hljs-number">96</span>, eps=1e-05, momentum=0.<span class="hljs-number">1</span>, affine=True, track_running_stats=True)
+            (<span class="hljs-number">2</span>): SiLU(<span class="hljs-name">inplace=True</span>)
+          )
+          (<span class="hljs-number">1</span>): ConvNormActivation(
+            (<span class="hljs-number">0</span>): Conv2d(<span class="hljs-number">96</span>, <span class="hljs-number">96</span>, kernel_size=(<span class="hljs-number">3</span>, <span class="hljs-number">3</span>), stride=(<span class="hljs-number">2</span>, <span class="hljs-number">2</span>), padding=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), groups=96, bias=False)
+            (<span class="hljs-number">1</span>): BatchNorm2d(<span class="hljs-number">96</span>, eps=1e-05, momentum=0.<span class="hljs-number">1</span>, affine=True, track_running_stats=True)
+            (<span class="hljs-number">2</span>): SiLU(<span class="hljs-name">inplace=True</span>)
+          )
+          (<span class="hljs-number">2</span>): SqueezeExcitation(
+            (<span class="hljs-name">avgpool</span>): AdaptiveAvgPool2d(<span class="hljs-name">output_size=1</span>)
+            (<span class="hljs-name">fc1</span>): Conv2d(<span class="hljs-number">96</span>, <span class="hljs-number">4</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>))
+            (<span class="hljs-name">fc2</span>): Conv2d(<span class="hljs-number">4</span>, <span class="hljs-number">96</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>))
+            (<span class="hljs-name">activation</span>): SiLU(<span class="hljs-name">inplace=True</span>)
+            (<span class="hljs-name">scale_activation</span>): Sigmoid()
+          )
+          (<span class="hljs-number">3</span>): ConvNormActivation(
+            (<span class="hljs-number">0</span>): Conv2d(<span class="hljs-number">96</span>, <span class="hljs-number">24</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), bias=False)
+            (<span class="hljs-number">1</span>): BatchNorm2d(<span class="hljs-number">24</span>, eps=1e-05, momentum=0.<span class="hljs-number">1</span>, affine=True, track_running_stats=True)
+          )
+        )
+        (<span class="hljs-name">stochastic_depth</span>): StochasticDepth(<span class="hljs-name">p=0</span>.<span class="hljs-number">0125</span>, mode=row)
+      )
+      (<span class="hljs-number">1</span>): MBConv(
+        (<span class="hljs-name">block</span>): Sequential(
+          (<span class="hljs-number">0</span>): ConvNormActivation(
+            (<span class="hljs-number">0</span>): Conv2d(<span class="hljs-number">24</span>, <span class="hljs-number">144</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), bias=False)
+            (<span class="hljs-number">1</span>): BatchNorm2d(<span class="hljs-number">144</span>, eps=1e-05, momentum=0.<span class="hljs-number">1</span>, affine=True, track_running_stats=True)
+            (<span class="hljs-number">2</span>): SiLU(<span class="hljs-name">inplace=True</span>)
+          )
+          (<span class="hljs-number">1</span>): ConvNormActivation(
+            (<span class="hljs-number">0</span>): Conv2d(<span class="hljs-number">144</span>, <span class="hljs-number">144</span>, kernel_size=(<span class="hljs-number">3</span>, <span class="hljs-number">3</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), padding=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), groups=144, bias=False)
+            (<span class="hljs-number">1</span>): BatchNorm2d(<span class="hljs-number">144</span>, eps=1e-05, momentum=0.<span class="hljs-number">1</span>, affine=True, track_running_stats=True)
+            (<span class="hljs-number">2</span>): SiLU(<span class="hljs-name">inplace=True</span>)
+          )
+          (<span class="hljs-number">2</span>): SqueezeExcitation(
+            (<span class="hljs-name">avgpool</span>): AdaptiveAvgPool2d(<span class="hljs-name">output_size=1</span>)
+            (<span class="hljs-name">fc1</span>): Conv2d(<span class="hljs-number">144</span>, <span class="hljs-number">6</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>))
+            (<span class="hljs-name">fc2</span>): Conv2d(<span class="hljs-number">6</span>, <span class="hljs-number">144</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>))
+            (<span class="hljs-name">activation</span>): SiLU(<span class="hljs-name">inplace=True</span>)
+            (<span class="hljs-name">scale_activation</span>): Sigmoid()
+          )
+          (<span class="hljs-number">3</span>): ConvNormActivation(
+            (<span class="hljs-number">0</span>): Conv2d(<span class="hljs-number">144</span>, <span class="hljs-number">24</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), bias=False)
+            (<span class="hljs-number">1</span>): BatchNorm2d(<span class="hljs-number">24</span>, eps=1e-05, momentum=0.<span class="hljs-number">1</span>, affine=True, track_running_stats=True)
+          )
+        )
+        (<span class="hljs-name">stochastic_depth</span>): StochasticDepth(<span class="hljs-name">p=0</span>.<span class="hljs-number">025</span>, mode=row)
+      )
+    )
+    (<span class="hljs-number">3</span>): Sequential(
+      (<span class="hljs-number">0</span>): MBConv(
+        (<span class="hljs-name">block</span>): Sequential(
+          (<span class="hljs-number">0</span>): ConvNormActivation(
+            (<span class="hljs-number">0</span>): Conv2d(<span class="hljs-number">24</span>, <span class="hljs-number">144</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), bias=False)
+            (<span class="hljs-number">1</span>): BatchNorm2d(<span class="hljs-number">144</span>, eps=1e-05, momentum=0.<span class="hljs-number">1</span>, affine=True, track_running_stats=True)
+            (<span class="hljs-number">2</span>): SiLU(<span class="hljs-name">inplace=True</span>)
+          )
+          (<span class="hljs-number">1</span>): ConvNormActivation(
+            (<span class="hljs-number">0</span>): Conv2d(<span class="hljs-number">144</span>, <span class="hljs-number">144</span>, kernel_size=(<span class="hljs-number">5</span>, <span class="hljs-number">5</span>), stride=(<span class="hljs-number">2</span>, <span class="hljs-number">2</span>), padding=(<span class="hljs-number">2</span>, <span class="hljs-number">2</span>), groups=144, bias=False)
+            (<span class="hljs-number">1</span>): BatchNorm2d(<span class="hljs-number">144</span>, eps=1e-05, momentum=0.<span class="hljs-number">1</span>, affine=True, track_running_stats=True)
+            (<span class="hljs-number">2</span>): SiLU(<span class="hljs-name">inplace=True</span>)
+          )
+          (<span class="hljs-number">2</span>): SqueezeExcitation(
+            (<span class="hljs-name">avgpool</span>): AdaptiveAvgPool2d(<span class="hljs-name">output_size=1</span>)
+            (<span class="hljs-name">fc1</span>): Conv2d(<span class="hljs-number">144</span>, <span class="hljs-number">6</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>))
+            (<span class="hljs-name">fc2</span>): Conv2d(<span class="hljs-number">6</span>, <span class="hljs-number">144</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>))
+            (<span class="hljs-name">activation</span>): SiLU(<span class="hljs-name">inplace=True</span>)
+            (<span class="hljs-name">scale_activation</span>): Sigmoid()
+          )
+          (<span class="hljs-number">3</span>): ConvNormActivation(
+            (<span class="hljs-number">0</span>): Conv2d(<span class="hljs-number">144</span>, <span class="hljs-number">40</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), bias=False)
+            (<span class="hljs-number">1</span>): BatchNorm2d(<span class="hljs-number">40</span>, eps=1e-05, momentum=0.<span class="hljs-number">1</span>, affine=True, track_running_stats=True)
+          )
+        )
+        (<span class="hljs-name">stochastic_depth</span>): StochasticDepth(<span class="hljs-name">p=0</span>.<span class="hljs-number">037500000000000006</span>, mode=row)
+      )
+      (<span class="hljs-number">1</span>): MBConv(
+        (<span class="hljs-name">block</span>): Sequential(
+          (<span class="hljs-number">0</span>): ConvNormActivation(
+            (<span class="hljs-number">0</span>): Conv2d(<span class="hljs-number">40</span>, <span class="hljs-number">240</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), bias=False)
+            (<span class="hljs-number">1</span>): BatchNorm2d(<span class="hljs-number">240</span>, eps=1e-05, momentum=0.<span class="hljs-number">1</span>, affine=True, track_running_stats=True)
+            (<span class="hljs-number">2</span>): SiLU(<span class="hljs-name">inplace=True</span>)
+          )
+          (<span class="hljs-number">1</span>): ConvNormActivation(
+            (<span class="hljs-number">0</span>): Conv2d(<span class="hljs-number">240</span>, <span class="hljs-number">240</span>, kernel_size=(<span class="hljs-number">5</span>, <span class="hljs-number">5</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), padding=(<span class="hljs-number">2</span>, <span class="hljs-number">2</span>), groups=240, bias=False)
+            (<span class="hljs-number">1</span>): BatchNorm2d(<span class="hljs-number">240</span>, eps=1e-05, momentum=0.<span class="hljs-number">1</span>, affine=True, track_running_stats=True)
+            (<span class="hljs-number">2</span>): SiLU(<span class="hljs-name">inplace=True</span>)
+          )
+          (<span class="hljs-number">2</span>): SqueezeExcitation(
+            (<span class="hljs-name">avgpool</span>): AdaptiveAvgPool2d(<span class="hljs-name">output_size=1</span>)
+            (<span class="hljs-name">fc1</span>): Conv2d(<span class="hljs-number">240</span>, <span class="hljs-number">10</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>))
+            (<span class="hljs-name">fc2</span>): Conv2d(<span class="hljs-number">10</span>, <span class="hljs-number">240</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>))
+            (<span class="hljs-name">activation</span>): SiLU(<span class="hljs-name">inplace=True</span>)
+            (<span class="hljs-name">scale_activation</span>): Sigmoid()
+          )
+          (<span class="hljs-number">3</span>): ConvNormActivation(
+            (<span class="hljs-number">0</span>): Conv2d(<span class="hljs-number">240</span>, <span class="hljs-number">40</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), bias=False)
+            (<span class="hljs-number">1</span>): BatchNorm2d(<span class="hljs-number">40</span>, eps=1e-05, momentum=0.<span class="hljs-number">1</span>, affine=True, track_running_stats=True)
+          )
+        )
+        (<span class="hljs-name">stochastic_depth</span>): StochasticDepth(<span class="hljs-name">p=0</span>.<span class="hljs-number">05</span>, mode=row)
+      )
+    )
+    (<span class="hljs-number">4</span>): Sequential(
+      (<span class="hljs-number">0</span>): MBConv(
+        (<span class="hljs-name">block</span>): Sequential(
+          (<span class="hljs-number">0</span>): ConvNormActivation(
+            (<span class="hljs-number">0</span>): Conv2d(<span class="hljs-number">40</span>, <span class="hljs-number">240</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), bias=False)
+            (<span class="hljs-number">1</span>): BatchNorm2d(<span class="hljs-number">240</span>, eps=1e-05, momentum=0.<span class="hljs-number">1</span>, affine=True, track_running_stats=True)
+            (<span class="hljs-number">2</span>): SiLU(<span class="hljs-name">inplace=True</span>)
+          )
+          (<span class="hljs-number">1</span>): ConvNormActivation(
+            (<span class="hljs-number">0</span>): Conv2d(<span class="hljs-number">240</span>, <span class="hljs-number">240</span>, kernel_size=(<span class="hljs-number">3</span>, <span class="hljs-number">3</span>), stride=(<span class="hljs-number">2</span>, <span class="hljs-number">2</span>), padding=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), groups=240, bias=False)
+            (<span class="hljs-number">1</span>): BatchNorm2d(<span class="hljs-number">240</span>, eps=1e-05, momentum=0.<span class="hljs-number">1</span>, affine=True, track_running_stats=True)
+            (<span class="hljs-number">2</span>): SiLU(<span class="hljs-name">inplace=True</span>)
+          )
+          (<span class="hljs-number">2</span>): SqueezeExcitation(
+            (<span class="hljs-name">avgpool</span>): AdaptiveAvgPool2d(<span class="hljs-name">output_size=1</span>)
+            (<span class="hljs-name">fc1</span>): Conv2d(<span class="hljs-number">240</span>, <span class="hljs-number">10</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>))
+            (<span class="hljs-name">fc2</span>): Conv2d(<span class="hljs-number">10</span>, <span class="hljs-number">240</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>))
+            (<span class="hljs-name">activation</span>): SiLU(<span class="hljs-name">inplace=True</span>)
+            (<span class="hljs-name">scale_activation</span>): Sigmoid()
+          )
+          (<span class="hljs-number">3</span>): ConvNormActivation(
+            (<span class="hljs-number">0</span>): Conv2d(<span class="hljs-number">240</span>, <span class="hljs-number">80</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), bias=False)
+            (<span class="hljs-number">1</span>): BatchNorm2d(<span class="hljs-number">80</span>, eps=1e-05, momentum=0.<span class="hljs-number">1</span>, affine=True, track_running_stats=True)
+          )
+        )
+        (<span class="hljs-name">stochastic_depth</span>): StochasticDepth(<span class="hljs-name">p=0</span>.<span class="hljs-number">0625</span>, mode=row)
+      )
+      (<span class="hljs-number">1</span>): MBConv(
+        (<span class="hljs-name">block</span>): Sequential(
+          (<span class="hljs-number">0</span>): ConvNormActivation(
+            (<span class="hljs-number">0</span>): Conv2d(<span class="hljs-number">80</span>, <span class="hljs-number">480</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), bias=False)
+            (<span class="hljs-number">1</span>): BatchNorm2d(<span class="hljs-number">480</span>, eps=1e-05, momentum=0.<span class="hljs-number">1</span>, affine=True, track_running_stats=True)
+            (<span class="hljs-number">2</span>): SiLU(<span class="hljs-name">inplace=True</span>)
+          )
+          (<span class="hljs-number">1</span>): ConvNormActivation(
+            (<span class="hljs-number">0</span>): Conv2d(<span class="hljs-number">480</span>, <span class="hljs-number">480</span>, kernel_size=(<span class="hljs-number">3</span>, <span class="hljs-number">3</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), padding=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), groups=480, bias=False)
+            (<span class="hljs-number">1</span>): BatchNorm2d(<span class="hljs-number">480</span>, eps=1e-05, momentum=0.<span class="hljs-number">1</span>, affine=True, track_running_stats=True)
+            (<span class="hljs-number">2</span>): SiLU(<span class="hljs-name">inplace=True</span>)
+          )
+          (<span class="hljs-number">2</span>): SqueezeExcitation(
+            (<span class="hljs-name">avgpool</span>): AdaptiveAvgPool2d(<span class="hljs-name">output_size=1</span>)
+            (<span class="hljs-name">fc1</span>): Conv2d(<span class="hljs-number">480</span>, <span class="hljs-number">20</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>))
+            (<span class="hljs-name">fc2</span>): Conv2d(<span class="hljs-number">20</span>, <span class="hljs-number">480</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>))
+            (<span class="hljs-name">activation</span>): SiLU(<span class="hljs-name">inplace=True</span>)
+            (<span class="hljs-name">scale_activation</span>): Sigmoid()
+          )
+          (<span class="hljs-number">3</span>): ConvNormActivation(
+            (<span class="hljs-number">0</span>): Conv2d(<span class="hljs-number">480</span>, <span class="hljs-number">80</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), bias=False)
+            (<span class="hljs-number">1</span>): BatchNorm2d(<span class="hljs-number">80</span>, eps=1e-05, momentum=0.<span class="hljs-number">1</span>, affine=True, track_running_stats=True)
+          )
+        )
+        (<span class="hljs-name">stochastic_depth</span>): StochasticDepth(<span class="hljs-name">p=0</span>.<span class="hljs-number">07500000000000001</span>, mode=row)
+      )
+      (<span class="hljs-number">2</span>): MBConv(
+        (<span class="hljs-name">block</span>): Sequential(
+          (<span class="hljs-number">0</span>): ConvNormActivation(
+            (<span class="hljs-number">0</span>): Conv2d(<span class="hljs-number">80</span>, <span class="hljs-number">480</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), bias=False)
+            (<span class="hljs-number">1</span>): BatchNorm2d(<span class="hljs-number">480</span>, eps=1e-05, momentum=0.<span class="hljs-number">1</span>, affine=True, track_running_stats=True)
+            (<span class="hljs-number">2</span>): SiLU(<span class="hljs-name">inplace=True</span>)
+          )
+          (<span class="hljs-number">1</span>): ConvNormActivation(
+            (<span class="hljs-number">0</span>): Conv2d(<span class="hljs-number">480</span>, <span class="hljs-number">480</span>, kernel_size=(<span class="hljs-number">3</span>, <span class="hljs-number">3</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), padding=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), groups=480, bias=False)
+            (<span class="hljs-number">1</span>): BatchNorm2d(<span class="hljs-number">480</span>, eps=1e-05, momentum=0.<span class="hljs-number">1</span>, affine=True, track_running_stats=True)
+            (<span class="hljs-number">2</span>): SiLU(<span class="hljs-name">inplace=True</span>)
+          )
+          (<span class="hljs-number">2</span>): SqueezeExcitation(
+            (<span class="hljs-name">avgpool</span>): AdaptiveAvgPool2d(<span class="hljs-name">output_size=1</span>)
+            (<span class="hljs-name">fc1</span>): Conv2d(<span class="hljs-number">480</span>, <span class="hljs-number">20</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>))
+            (<span class="hljs-name">fc2</span>): Conv2d(<span class="hljs-number">20</span>, <span class="hljs-number">480</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>))
+            (<span class="hljs-name">activation</span>): SiLU(<span class="hljs-name">inplace=True</span>)
+            (<span class="hljs-name">scale_activation</span>): Sigmoid()
+          )
+          (<span class="hljs-number">3</span>): ConvNormActivation(
+            (<span class="hljs-number">0</span>): Conv2d(<span class="hljs-number">480</span>, <span class="hljs-number">80</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), bias=False)
+            (<span class="hljs-number">1</span>): BatchNorm2d(<span class="hljs-number">80</span>, eps=1e-05, momentum=0.<span class="hljs-number">1</span>, affine=True, track_running_stats=True)
+          )
+        )
+        (<span class="hljs-name">stochastic_depth</span>): StochasticDepth(<span class="hljs-name">p=0</span>.<span class="hljs-number">08750000000000001</span>, mode=row)
+      )
+    )
+    (<span class="hljs-number">5</span>): Sequential(
+      (<span class="hljs-number">0</span>): MBConv(
+        (<span class="hljs-name">block</span>): Sequential(
+          (<span class="hljs-number">0</span>): ConvNormActivation(
+            (<span class="hljs-number">0</span>): Conv2d(<span class="hljs-number">80</span>, <span class="hljs-number">480</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), bias=False)
+            (<span class="hljs-number">1</span>): BatchNorm2d(<span class="hljs-number">480</span>, eps=1e-05, momentum=0.<span class="hljs-number">1</span>, affine=True, track_running_stats=True)
+            (<span class="hljs-number">2</span>): SiLU(<span class="hljs-name">inplace=True</span>)
+          )
+          (<span class="hljs-number">1</span>): ConvNormActivation(
+            (<span class="hljs-number">0</span>): Conv2d(<span class="hljs-number">480</span>, <span class="hljs-number">480</span>, kernel_size=(<span class="hljs-number">5</span>, <span class="hljs-number">5</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), padding=(<span class="hljs-number">2</span>, <span class="hljs-number">2</span>), groups=480, bias=False)
+            (<span class="hljs-number">1</span>): BatchNorm2d(<span class="hljs-number">480</span>, eps=1e-05, momentum=0.<span class="hljs-number">1</span>, affine=True, track_running_stats=True)
+            (<span class="hljs-number">2</span>): SiLU(<span class="hljs-name">inplace=True</span>)
+          )
+          (<span class="hljs-number">2</span>): SqueezeExcitation(
+            (<span class="hljs-name">avgpool</span>): AdaptiveAvgPool2d(<span class="hljs-name">output_size=1</span>)
+            (<span class="hljs-name">fc1</span>): Conv2d(<span class="hljs-number">480</span>, <span class="hljs-number">20</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>))
+            (<span class="hljs-name">fc2</span>): Conv2d(<span class="hljs-number">20</span>, <span class="hljs-number">480</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>))
+            (<span class="hljs-name">activation</span>): SiLU(<span class="hljs-name">inplace=True</span>)
+            (<span class="hljs-name">scale_activation</span>): Sigmoid()
+          )
+          (<span class="hljs-number">3</span>): ConvNormActivation(
+            (<span class="hljs-number">0</span>): Conv2d(<span class="hljs-number">480</span>, <span class="hljs-number">112</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), bias=False)
+            (<span class="hljs-number">1</span>): BatchNorm2d(<span class="hljs-number">112</span>, eps=1e-05, momentum=0.<span class="hljs-number">1</span>, affine=True, track_running_stats=True)
+          )
+        )
+        (<span class="hljs-name">stochastic_depth</span>): StochasticDepth(<span class="hljs-name">p=0</span>.<span class="hljs-number">1</span>, mode=row)
+      )
+      (<span class="hljs-number">1</span>): MBConv(
+        (<span class="hljs-name">block</span>): Sequential(
+          (<span class="hljs-number">0</span>): ConvNormActivation(
+            (<span class="hljs-number">0</span>): Conv2d(<span class="hljs-number">112</span>, <span class="hljs-number">672</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), bias=False)
+            (<span class="hljs-number">1</span>): BatchNorm2d(<span class="hljs-number">672</span>, eps=1e-05, momentum=0.<span class="hljs-number">1</span>, affine=True, track_running_stats=True)
+            (<span class="hljs-number">2</span>): SiLU(<span class="hljs-name">inplace=True</span>)
+          )
+          (<span class="hljs-number">1</span>): ConvNormActivation(
+            (<span class="hljs-number">0</span>): Conv2d(<span class="hljs-number">672</span>, <span class="hljs-number">672</span>, kernel_size=(<span class="hljs-number">5</span>, <span class="hljs-number">5</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), padding=(<span class="hljs-number">2</span>, <span class="hljs-number">2</span>), groups=672, bias=False)
+            (<span class="hljs-number">1</span>): BatchNorm2d(<span class="hljs-number">672</span>, eps=1e-05, momentum=0.<span class="hljs-number">1</span>, affine=True, track_running_stats=True)
+            (<span class="hljs-number">2</span>): SiLU(<span class="hljs-name">inplace=True</span>)
+          )
+          (<span class="hljs-number">2</span>): SqueezeExcitation(
+            (<span class="hljs-name">avgpool</span>): AdaptiveAvgPool2d(<span class="hljs-name">output_size=1</span>)
+            (<span class="hljs-name">fc1</span>): Conv2d(<span class="hljs-number">672</span>, <span class="hljs-number">28</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>))
+            (<span class="hljs-name">fc2</span>): Conv2d(<span class="hljs-number">28</span>, <span class="hljs-number">672</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>))
+            (<span class="hljs-name">activation</span>): SiLU(<span class="hljs-name">inplace=True</span>)
+            (<span class="hljs-name">scale_activation</span>): Sigmoid()
+          )
+          (<span class="hljs-number">3</span>): ConvNormActivation(
+            (<span class="hljs-number">0</span>): Conv2d(<span class="hljs-number">672</span>, <span class="hljs-number">112</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), bias=False)
+            (<span class="hljs-number">1</span>): BatchNorm2d(<span class="hljs-number">112</span>, eps=1e-05, momentum=0.<span class="hljs-number">1</span>, affine=True, track_running_stats=True)
+          )
+        )
+        (<span class="hljs-name">stochastic_depth</span>): StochasticDepth(<span class="hljs-name">p=0</span>.<span class="hljs-number">1125</span>, mode=row)
+      )
+      (<span class="hljs-number">2</span>): MBConv(
+        (<span class="hljs-name">block</span>): Sequential(
+          (<span class="hljs-number">0</span>): ConvNormActivation(
+            (<span class="hljs-number">0</span>): Conv2d(<span class="hljs-number">112</span>, <span class="hljs-number">672</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), bias=False)
+            (<span class="hljs-number">1</span>): BatchNorm2d(<span class="hljs-number">672</span>, eps=1e-05, momentum=0.<span class="hljs-number">1</span>, affine=True, track_running_stats=True)
+            (<span class="hljs-number">2</span>): SiLU(<span class="hljs-name">inplace=True</span>)
+          )
+          (<span class="hljs-number">1</span>): ConvNormActivation(
+            (<span class="hljs-number">0</span>): Conv2d(<span class="hljs-number">672</span>, <span class="hljs-number">672</span>, kernel_size=(<span class="hljs-number">5</span>, <span class="hljs-number">5</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), padding=(<span class="hljs-number">2</span>, <span class="hljs-number">2</span>), groups=672, bias=False)
+            (<span class="hljs-number">1</span>): BatchNorm2d(<span class="hljs-number">672</span>, eps=1e-05, momentum=0.<span class="hljs-number">1</span>, affine=True, track_running_stats=True)
+            (<span class="hljs-number">2</span>): SiLU(<span class="hljs-name">inplace=True</span>)
+          )
+          (<span class="hljs-number">2</span>): SqueezeExcitation(
+            (<span class="hljs-name">avgpool</span>): AdaptiveAvgPool2d(<span class="hljs-name">output_size=1</span>)
+            (<span class="hljs-name">fc1</span>): Conv2d(<span class="hljs-number">672</span>, <span class="hljs-number">28</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>))
+            (<span class="hljs-name">fc2</span>): Conv2d(<span class="hljs-number">28</span>, <span class="hljs-number">672</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>))
+            (<span class="hljs-name">activation</span>): SiLU(<span class="hljs-name">inplace=True</span>)
+            (<span class="hljs-name">scale_activation</span>): Sigmoid()
+          )
+          (<span class="hljs-number">3</span>): ConvNormActivation(
+            (<span class="hljs-number">0</span>): Conv2d(<span class="hljs-number">672</span>, <span class="hljs-number">112</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), bias=False)
+            (<span class="hljs-number">1</span>): BatchNorm2d(<span class="hljs-number">112</span>, eps=1e-05, momentum=0.<span class="hljs-number">1</span>, affine=True, track_running_stats=True)
+          )
+        )
+        (<span class="hljs-name">stochastic_depth</span>): StochasticDepth(<span class="hljs-name">p=0</span>.<span class="hljs-number">125</span>, mode=row)
+      )
+    )
+    (<span class="hljs-number">6</span>): Sequential(
+      (<span class="hljs-number">0</span>): MBConv(
+        (<span class="hljs-name">block</span>): Sequential(
+          (<span class="hljs-number">0</span>): ConvNormActivation(
+            (<span class="hljs-number">0</span>): Conv2d(<span class="hljs-number">112</span>, <span class="hljs-number">672</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), bias=False)
+            (<span class="hljs-number">1</span>): BatchNorm2d(<span class="hljs-number">672</span>, eps=1e-05, momentum=0.<span class="hljs-number">1</span>, affine=True, track_running_stats=True)
+            (<span class="hljs-number">2</span>): SiLU(<span class="hljs-name">inplace=True</span>)
+          )
+          (<span class="hljs-number">1</span>): ConvNormActivation(
+            (<span class="hljs-number">0</span>): Conv2d(<span class="hljs-number">672</span>, <span class="hljs-number">672</span>, kernel_size=(<span class="hljs-number">5</span>, <span class="hljs-number">5</span>), stride=(<span class="hljs-number">2</span>, <span class="hljs-number">2</span>), padding=(<span class="hljs-number">2</span>, <span class="hljs-number">2</span>), groups=672, bias=False)
+            (<span class="hljs-number">1</span>): BatchNorm2d(<span class="hljs-number">672</span>, eps=1e-05, momentum=0.<span class="hljs-number">1</span>, affine=True, track_running_stats=True)
+            (<span class="hljs-number">2</span>): SiLU(<span class="hljs-name">inplace=True</span>)
+          )
+          (<span class="hljs-number">2</span>): SqueezeExcitation(
+            (<span class="hljs-name">avgpool</span>): AdaptiveAvgPool2d(<span class="hljs-name">output_size=1</span>)
+            (<span class="hljs-name">fc1</span>): Conv2d(<span class="hljs-number">672</span>, <span class="hljs-number">28</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>))
+            (<span class="hljs-name">fc2</span>): Conv2d(<span class="hljs-number">28</span>, <span class="hljs-number">672</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>))
+            (<span class="hljs-name">activation</span>): SiLU(<span class="hljs-name">inplace=True</span>)
+            (<span class="hljs-name">scale_activation</span>): Sigmoid()
+          )
+          (<span class="hljs-number">3</span>): ConvNormActivation(
+            (<span class="hljs-number">0</span>): Conv2d(<span class="hljs-number">672</span>, <span class="hljs-number">192</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), bias=False)
+            (<span class="hljs-number">1</span>): BatchNorm2d(<span class="hljs-number">192</span>, eps=1e-05, momentum=0.<span class="hljs-number">1</span>, affine=True, track_running_stats=True)
+          )
+        )
+        (<span class="hljs-name">stochastic_depth</span>): StochasticDepth(<span class="hljs-name">p=0</span>.<span class="hljs-number">1375</span>, mode=row)
+      )
+      (<span class="hljs-number">1</span>): MBConv(
+        (<span class="hljs-name">block</span>): Sequential(
+          (<span class="hljs-number">0</span>): ConvNormActivation(
+            (<span class="hljs-number">0</span>): Conv2d(<span class="hljs-number">192</span>, <span class="hljs-number">1152</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), bias=False)
+            (<span class="hljs-number">1</span>): BatchNorm2d(<span class="hljs-number">1152</span>, eps=1e-05, momentum=0.<span class="hljs-number">1</span>, affine=True, track_running_stats=True)
+            (<span class="hljs-number">2</span>): SiLU(<span class="hljs-name">inplace=True</span>)
+          )
+          (<span class="hljs-number">1</span>): ConvNormActivation(
+            (<span class="hljs-number">0</span>): Conv2d(<span class="hljs-number">1152</span>, <span class="hljs-number">1152</span>, kernel_size=(<span class="hljs-number">5</span>, <span class="hljs-number">5</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), padding=(<span class="hljs-number">2</span>, <span class="hljs-number">2</span>), groups=1152, bias=False)
+            (<span class="hljs-number">1</span>): BatchNorm2d(<span class="hljs-number">1152</span>, eps=1e-05, momentum=0.<span class="hljs-number">1</span>, affine=True, track_running_stats=True)
+            (<span class="hljs-number">2</span>): SiLU(<span class="hljs-name">inplace=True</span>)
+          )
+          (<span class="hljs-number">2</span>): SqueezeExcitation(
+            (<span class="hljs-name">avgpool</span>): AdaptiveAvgPool2d(<span class="hljs-name">output_size=1</span>)
+            (<span class="hljs-name">fc1</span>): Conv2d(<span class="hljs-number">1152</span>, <span class="hljs-number">48</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>))
+            (<span class="hljs-name">fc2</span>): Conv2d(<span class="hljs-number">48</span>, <span class="hljs-number">1152</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>))
+            (<span class="hljs-name">activation</span>): SiLU(<span class="hljs-name">inplace=True</span>)
+            (<span class="hljs-name">scale_activation</span>): Sigmoid()
+          )
+          (<span class="hljs-number">3</span>): ConvNormActivation(
+            (<span class="hljs-number">0</span>): Conv2d(<span class="hljs-number">1152</span>, <span class="hljs-number">192</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), bias=False)
+            (<span class="hljs-number">1</span>): BatchNorm2d(<span class="hljs-number">192</span>, eps=1e-05, momentum=0.<span class="hljs-number">1</span>, affine=True, track_running_stats=True)
+          )
+        )
+        (<span class="hljs-name">stochastic_depth</span>): StochasticDepth(<span class="hljs-name">p=0</span>.<span class="hljs-number">15000000000000002</span>, mode=row)
+      )
+      (<span class="hljs-number">2</span>): MBConv(
+        (<span class="hljs-name">block</span>): Sequential(
+          (<span class="hljs-number">0</span>): ConvNormActivation(
+            (<span class="hljs-number">0</span>): Conv2d(<span class="hljs-number">192</span>, <span class="hljs-number">1152</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), bias=False)
+            (<span class="hljs-number">1</span>): BatchNorm2d(<span class="hljs-number">1152</span>, eps=1e-05, momentum=0.<span class="hljs-number">1</span>, affine=True, track_running_stats=True)
+            (<span class="hljs-number">2</span>): SiLU(<span class="hljs-name">inplace=True</span>)
+          )
+          (<span class="hljs-number">1</span>): ConvNormActivation(
+            (<span class="hljs-number">0</span>): Conv2d(<span class="hljs-number">1152</span>, <span class="hljs-number">1152</span>, kernel_size=(<span class="hljs-number">5</span>, <span class="hljs-number">5</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), padding=(<span class="hljs-number">2</span>, <span class="hljs-number">2</span>), groups=1152, bias=False)
+            (<span class="hljs-number">1</span>): BatchNorm2d(<span class="hljs-number">1152</span>, eps=1e-05, momentum=0.<span class="hljs-number">1</span>, affine=True, track_running_stats=True)
+            (<span class="hljs-number">2</span>): SiLU(<span class="hljs-name">inplace=True</span>)
+          )
+          (<span class="hljs-number">2</span>): SqueezeExcitation(
+            (<span class="hljs-name">avgpool</span>): AdaptiveAvgPool2d(<span class="hljs-name">output_size=1</span>)
+            (<span class="hljs-name">fc1</span>): Conv2d(<span class="hljs-number">1152</span>, <span class="hljs-number">48</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>))
+            (<span class="hljs-name">fc2</span>): Conv2d(<span class="hljs-number">48</span>, <span class="hljs-number">1152</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>))
+            (<span class="hljs-name">activation</span>): SiLU(<span class="hljs-name">inplace=True</span>)
+            (<span class="hljs-name">scale_activation</span>): Sigmoid()
+          )
+          (<span class="hljs-number">3</span>): ConvNormActivation(
+            (<span class="hljs-number">0</span>): Conv2d(<span class="hljs-number">1152</span>, <span class="hljs-number">192</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), bias=False)
+            (<span class="hljs-number">1</span>): BatchNorm2d(<span class="hljs-number">192</span>, eps=1e-05, momentum=0.<span class="hljs-number">1</span>, affine=True, track_running_stats=True)
+          )
+        )
+        (<span class="hljs-name">stochastic_depth</span>): StochasticDepth(<span class="hljs-name">p=0</span>.<span class="hljs-number">1625</span>, mode=row)
+      )
+      (<span class="hljs-number">3</span>): MBConv(
+        (<span class="hljs-name">block</span>): Sequential(
+          (<span class="hljs-number">0</span>): ConvNormActivation(
+            (<span class="hljs-number">0</span>): Conv2d(<span class="hljs-number">192</span>, <span class="hljs-number">1152</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), bias=False)
+            (<span class="hljs-number">1</span>): BatchNorm2d(<span class="hljs-number">1152</span>, eps=1e-05, momentum=0.<span class="hljs-number">1</span>, affine=True, track_running_stats=True)
+            (<span class="hljs-number">2</span>): SiLU(<span class="hljs-name">inplace=True</span>)
+          )
+          (<span class="hljs-number">1</span>): ConvNormActivation(
+            (<span class="hljs-number">0</span>): Conv2d(<span class="hljs-number">1152</span>, <span class="hljs-number">1152</span>, kernel_size=(<span class="hljs-number">5</span>, <span class="hljs-number">5</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), padding=(<span class="hljs-number">2</span>, <span class="hljs-number">2</span>), groups=1152, bias=False)
+            (<span class="hljs-number">1</span>): BatchNorm2d(<span class="hljs-number">1152</span>, eps=1e-05, momentum=0.<span class="hljs-number">1</span>, affine=True, track_running_stats=True)
+            (<span class="hljs-number">2</span>): SiLU(<span class="hljs-name">inplace=True</span>)
+          )
+          (<span class="hljs-number">2</span>): SqueezeExcitation(
+            (<span class="hljs-name">avgpool</span>): AdaptiveAvgPool2d(<span class="hljs-name">output_size=1</span>)
+            (<span class="hljs-name">fc1</span>): Conv2d(<span class="hljs-number">1152</span>, <span class="hljs-number">48</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>))
+            (<span class="hljs-name">fc2</span>): Conv2d(<span class="hljs-number">48</span>, <span class="hljs-number">1152</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>))
+            (<span class="hljs-name">activation</span>): SiLU(<span class="hljs-name">inplace=True</span>)
+            (<span class="hljs-name">scale_activation</span>): Sigmoid()
+          )
+          (<span class="hljs-number">3</span>): ConvNormActivation(
+            (<span class="hljs-number">0</span>): Conv2d(<span class="hljs-number">1152</span>, <span class="hljs-number">192</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), bias=False)
+            (<span class="hljs-number">1</span>): BatchNorm2d(<span class="hljs-number">192</span>, eps=1e-05, momentum=0.<span class="hljs-number">1</span>, affine=True, track_running_stats=True)
+          )
+        )
+        (<span class="hljs-name">stochastic_depth</span>): StochasticDepth(<span class="hljs-name">p=0</span>.<span class="hljs-number">17500000000000002</span>, mode=row)
+      )
+    )
+    (<span class="hljs-number">7</span>): Sequential(
+      (<span class="hljs-number">0</span>): MBConv(
+        (<span class="hljs-name">block</span>): Sequential(
+          (<span class="hljs-number">0</span>): ConvNormActivation(
+            (<span class="hljs-number">0</span>): Conv2d(<span class="hljs-number">192</span>, <span class="hljs-number">1152</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), bias=False)
+            (<span class="hljs-number">1</span>): BatchNorm2d(<span class="hljs-number">1152</span>, eps=1e-05, momentum=0.<span class="hljs-number">1</span>, affine=True, track_running_stats=True)
+            (<span class="hljs-number">2</span>): SiLU(<span class="hljs-name">inplace=True</span>)
+          )
+          (<span class="hljs-number">1</span>): ConvNormActivation(
+            (<span class="hljs-number">0</span>): Conv2d(<span class="hljs-number">1152</span>, <span class="hljs-number">1152</span>, kernel_size=(<span class="hljs-number">3</span>, <span class="hljs-number">3</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), padding=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), groups=1152, bias=False)
+            (<span class="hljs-number">1</span>): BatchNorm2d(<span class="hljs-number">1152</span>, eps=1e-05, momentum=0.<span class="hljs-number">1</span>, affine=True, track_running_stats=True)
+            (<span class="hljs-number">2</span>): SiLU(<span class="hljs-name">inplace=True</span>)
+          )
+          (<span class="hljs-number">2</span>): SqueezeExcitation(
+            (<span class="hljs-name">avgpool</span>): AdaptiveAvgPool2d(<span class="hljs-name">output_size=1</span>)
+            (<span class="hljs-name">fc1</span>): Conv2d(<span class="hljs-number">1152</span>, <span class="hljs-number">48</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>))
+            (<span class="hljs-name">fc2</span>): Conv2d(<span class="hljs-number">48</span>, <span class="hljs-number">1152</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>))
+            (<span class="hljs-name">activation</span>): SiLU(<span class="hljs-name">inplace=True</span>)
+            (<span class="hljs-name">scale_activation</span>): Sigmoid()
+          )
+          (<span class="hljs-number">3</span>): ConvNormActivation(
+            (<span class="hljs-number">0</span>): Conv2d(<span class="hljs-number">1152</span>, <span class="hljs-number">320</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), bias=False)
+            (<span class="hljs-number">1</span>): BatchNorm2d(<span class="hljs-number">320</span>, eps=1e-05, momentum=0.<span class="hljs-number">1</span>, affine=True, track_running_stats=True)
+          )
+        )
+        (<span class="hljs-name">stochastic_depth</span>): StochasticDepth(<span class="hljs-name">p=0</span>.<span class="hljs-number">1875</span>, mode=row)
+      )
+    )
+    (<span class="hljs-number">8</span>): ConvNormActivation(
+      (<span class="hljs-number">0</span>): Conv2d(<span class="hljs-number">320</span>, <span class="hljs-number">1280</span>, kernel_size=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), stride=(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>), bias=False)
+      (<span class="hljs-number">1</span>): BatchNorm2d(<span class="hljs-number">1280</span>, eps=1e-05, momentum=0.<span class="hljs-number">1</span>, affine=True, track_running_stats=True)
+      (<span class="hljs-number">2</span>): SiLU(<span class="hljs-name">inplace=True</span>)
+    )
+  )
+  (<span class="hljs-name">avgpool</span>): AdaptiveAvgPool2d(<span class="hljs-name">output_size=1</span>)
+  (<span class="hljs-name">classifier</span>): Sequential(
+    (<span class="hljs-number">0</span>): Dropout(<span class="hljs-name">p=0</span>.<span class="hljs-number">2</span>, inplace=True)
+    (<span class="hljs-number">1</span>): Linear(<span class="hljs-name">in_features=1280</span>, out_features=5, bias=True)
+  )
+)
+</code></pre>
+  <pre><code class="lang-python"><span class="hljs-comment"># TODO</span>
+<span class="hljs-keyword">from</span> torchsummary <span class="hljs-keyword">import</span> summary
+summary(model, input_size=(<span class="hljs-number">3</span>,<span class="hljs-number">224</span>,<span class="hljs-number">224</span>))
+</code></pre>
+  <pre><code>----------------------------------------------------------------
+        Layer (type)               Output Shape         Param #
+================================================================
+            Conv2d<span class="hljs-string">-1</span>         [<span class="hljs-string">-1</span>, 32, 112, 112]             864
+       BatchNorm2d<span class="hljs-string">-2</span>         [<span class="hljs-string">-1</span>, 32, 112, 112]              64
+              SiLU<span class="hljs-string">-3</span>         [<span class="hljs-string">-1</span>, 32, 112, 112]               0
+            Conv2d<span class="hljs-string">-4</span>         [<span class="hljs-string">-1</span>, 32, 112, 112]             288
+       BatchNorm2d<span class="hljs-string">-5</span>         [<span class="hljs-string">-1</span>, 32, 112, 112]              64
+              SiLU<span class="hljs-string">-6</span>         [<span class="hljs-string">-1</span>, 32, 112, 112]               0
+ AdaptiveAvgPool2d<span class="hljs-string">-7</span>             [<span class="hljs-string">-1</span>, 32, 1, 1]               0
+            Conv2d<span class="hljs-string">-8</span>              [<span class="hljs-string">-1</span>, 8, 1, 1]             264
+              SiLU<span class="hljs-string">-9</span>              [<span class="hljs-string">-1</span>, 8, 1, 1]               0
+           Conv2d<span class="hljs-string">-10</span>             [<span class="hljs-string">-1</span>, 32, 1, 1]             288
+          Sigmoid<span class="hljs-string">-11</span>             [<span class="hljs-string">-1</span>, 32, 1, 1]               0
+SqueezeExcitation<span class="hljs-string">-12</span>         [<span class="hljs-string">-1</span>, 32, 112, 112]               0
+           Conv2d<span class="hljs-string">-13</span>         [<span class="hljs-string">-1</span>, 16, 112, 112]             512
+      BatchNorm2d<span class="hljs-string">-14</span>         [<span class="hljs-string">-1</span>, 16, 112, 112]              32
+           MBConv<span class="hljs-string">-15</span>         [<span class="hljs-string">-1</span>, 16, 112, 112]               0
+           Conv2d<span class="hljs-string">-16</span>         [<span class="hljs-string">-1</span>, 96, 112, 112]           1,536
+      BatchNorm2d<span class="hljs-string">-17</span>         [<span class="hljs-string">-1</span>, 96, 112, 112]             192
+             SiLU<span class="hljs-string">-18</span>         [<span class="hljs-string">-1</span>, 96, 112, 112]               0
+           Conv2d<span class="hljs-string">-19</span>           [<span class="hljs-string">-1</span>, 96, 56, 56]             864
+      BatchNorm2d<span class="hljs-string">-20</span>           [<span class="hljs-string">-1</span>, 96, 56, 56]             192
+             SiLU<span class="hljs-string">-21</span>           [<span class="hljs-string">-1</span>, 96, 56, 56]               0
+AdaptiveAvgPool2d<span class="hljs-string">-22</span>             [<span class="hljs-string">-1</span>, 96, 1, 1]               0
+           Conv2d<span class="hljs-string">-23</span>              [<span class="hljs-string">-1</span>, 4, 1, 1]             388
+             SiLU<span class="hljs-string">-24</span>              [<span class="hljs-string">-1</span>, 4, 1, 1]               0
+           Conv2d<span class="hljs-string">-25</span>             [<span class="hljs-string">-1</span>, 96, 1, 1]             480
+          Sigmoid<span class="hljs-string">-26</span>             [<span class="hljs-string">-1</span>, 96, 1, 1]               0
+SqueezeExcitation<span class="hljs-string">-27</span>           [<span class="hljs-string">-1</span>, 96, 56, 56]               0
+           Conv2d<span class="hljs-string">-28</span>           [<span class="hljs-string">-1</span>, 24, 56, 56]           2,304
+      BatchNorm2d<span class="hljs-string">-29</span>           [<span class="hljs-string">-1</span>, 24, 56, 56]              48
+           MBConv<span class="hljs-string">-30</span>           [<span class="hljs-string">-1</span>, 24, 56, 56]               0
+           Conv2d<span class="hljs-string">-31</span>          [<span class="hljs-string">-1</span>, 144, 56, 56]           3,456
+      BatchNorm2d<span class="hljs-string">-32</span>          [<span class="hljs-string">-1</span>, 144, 56, 56]             288
+             SiLU<span class="hljs-string">-33</span>          [<span class="hljs-string">-1</span>, 144, 56, 56]               0
+           Conv2d<span class="hljs-string">-34</span>          [<span class="hljs-string">-1</span>, 144, 56, 56]           1,296
+      BatchNorm2d<span class="hljs-string">-35</span>          [<span class="hljs-string">-1</span>, 144, 56, 56]             288
+             SiLU<span class="hljs-string">-36</span>          [<span class="hljs-string">-1</span>, 144, 56, 56]               0
+AdaptiveAvgPool2d<span class="hljs-string">-37</span>            [<span class="hljs-string">-1</span>, 144, 1, 1]               0
+           Conv2d<span class="hljs-string">-38</span>              [<span class="hljs-string">-1</span>, 6, 1, 1]             870
+             SiLU<span class="hljs-string">-39</span>              [<span class="hljs-string">-1</span>, 6, 1, 1]               0
+           Conv2d<span class="hljs-string">-40</span>            [<span class="hljs-string">-1</span>, 144, 1, 1]           1,008
+          Sigmoid<span class="hljs-string">-41</span>            [<span class="hljs-string">-1</span>, 144, 1, 1]               0
+SqueezeExcitation<span class="hljs-string">-42</span>          [<span class="hljs-string">-1</span>, 144, 56, 56]               0
+           Conv2d<span class="hljs-string">-43</span>           [<span class="hljs-string">-1</span>, 24, 56, 56]           3,456
+      BatchNorm2d<span class="hljs-string">-44</span>           [<span class="hljs-string">-1</span>, 24, 56, 56]              48
+  StochasticDepth<span class="hljs-string">-45</span>           [<span class="hljs-string">-1</span>, 24, 56, 56]               0
+           MBConv<span class="hljs-string">-46</span>           [<span class="hljs-string">-1</span>, 24, 56, 56]               0
+           Conv2d<span class="hljs-string">-47</span>          [<span class="hljs-string">-1</span>, 144, 56, 56]           3,456
+      BatchNorm2d<span class="hljs-string">-48</span>          [<span class="hljs-string">-1</span>, 144, 56, 56]             288
+             SiLU<span class="hljs-string">-49</span>          [<span class="hljs-string">-1</span>, 144, 56, 56]               0
+           Conv2d<span class="hljs-string">-50</span>          [<span class="hljs-string">-1</span>, 144, 28, 28]           3,600
+      BatchNorm2d<span class="hljs-string">-51</span>          [<span class="hljs-string">-1</span>, 144, 28, 28]             288
+             SiLU<span class="hljs-string">-52</span>          [<span class="hljs-string">-1</span>, 144, 28, 28]               0
+AdaptiveAvgPool2d<span class="hljs-string">-53</span>            [<span class="hljs-string">-1</span>, 144, 1, 1]               0
+           Conv2d<span class="hljs-string">-54</span>              [<span class="hljs-string">-1</span>, 6, 1, 1]             870
+             SiLU<span class="hljs-string">-55</span>              [<span class="hljs-string">-1</span>, 6, 1, 1]               0
+           Conv2d<span class="hljs-string">-56</span>            [<span class="hljs-string">-1</span>, 144, 1, 1]           1,008
+          Sigmoid<span class="hljs-string">-57</span>            [<span class="hljs-string">-1</span>, 144, 1, 1]               0
+SqueezeExcitation<span class="hljs-string">-58</span>          [<span class="hljs-string">-1</span>, 144, 28, 28]               0
+           Conv2d<span class="hljs-string">-59</span>           [<span class="hljs-string">-1</span>, 40, 28, 28]           5,760
+      BatchNorm2d<span class="hljs-string">-60</span>           [<span class="hljs-string">-1</span>, 40, 28, 28]              80
+           MBConv<span class="hljs-string">-61</span>           [<span class="hljs-string">-1</span>, 40, 28, 28]               0
+           Conv2d<span class="hljs-string">-62</span>          [<span class="hljs-string">-1</span>, 240, 28, 28]           9,600
+      BatchNorm2d<span class="hljs-string">-63</span>          [<span class="hljs-string">-1</span>, 240, 28, 28]             480
+             SiLU<span class="hljs-string">-64</span>          [<span class="hljs-string">-1</span>, 240, 28, 28]               0
+           Conv2d<span class="hljs-string">-65</span>          [<span class="hljs-string">-1</span>, 240, 28, 28]           6,000
+      BatchNorm2d<span class="hljs-string">-66</span>          [<span class="hljs-string">-1</span>, 240, 28, 28]             480
+             SiLU<span class="hljs-string">-67</span>          [<span class="hljs-string">-1</span>, 240, 28, 28]               0
+AdaptiveAvgPool2d<span class="hljs-string">-68</span>            [<span class="hljs-string">-1</span>, 240, 1, 1]               0
+           Conv2d<span class="hljs-string">-69</span>             [<span class="hljs-string">-1</span>, 10, 1, 1]           2,410
+             SiLU<span class="hljs-string">-70</span>             [<span class="hljs-string">-1</span>, 10, 1, 1]               0
+           Conv2d<span class="hljs-string">-71</span>            [<span class="hljs-string">-1</span>, 240, 1, 1]           2,640
+          Sigmoid<span class="hljs-string">-72</span>            [<span class="hljs-string">-1</span>, 240, 1, 1]               0
+SqueezeExcitation<span class="hljs-string">-73</span>          [<span class="hljs-string">-1</span>, 240, 28, 28]               0
+           Conv2d<span class="hljs-string">-74</span>           [<span class="hljs-string">-1</span>, 40, 28, 28]           9,600
+      BatchNorm2d<span class="hljs-string">-75</span>           [<span class="hljs-string">-1</span>, 40, 28, 28]              80
+  StochasticDepth<span class="hljs-string">-76</span>           [<span class="hljs-string">-1</span>, 40, 28, 28]               0
+           MBConv<span class="hljs-string">-77</span>           [<span class="hljs-string">-1</span>, 40, 28, 28]               0
+           Conv2d<span class="hljs-string">-78</span>          [<span class="hljs-string">-1</span>, 240, 28, 28]           9,600
+      BatchNorm2d<span class="hljs-string">-79</span>          [<span class="hljs-string">-1</span>, 240, 28, 28]             480
+             SiLU<span class="hljs-string">-80</span>          [<span class="hljs-string">-1</span>, 240, 28, 28]               0
+           Conv2d<span class="hljs-string">-81</span>          [<span class="hljs-string">-1</span>, 240, 14, 14]           2,160
+      BatchNorm2d<span class="hljs-string">-82</span>          [<span class="hljs-string">-1</span>, 240, 14, 14]             480
+             SiLU<span class="hljs-string">-83</span>          [<span class="hljs-string">-1</span>, 240, 14, 14]               0
+AdaptiveAvgPool2d<span class="hljs-string">-84</span>            [<span class="hljs-string">-1</span>, 240, 1, 1]               0
+           Conv2d<span class="hljs-string">-85</span>             [<span class="hljs-string">-1</span>, 10, 1, 1]           2,410
+             SiLU<span class="hljs-string">-86</span>             [<span class="hljs-string">-1</span>, 10, 1, 1]               0
+           Conv2d<span class="hljs-string">-87</span>            [<span class="hljs-string">-1</span>, 240, 1, 1]           2,640
+          Sigmoid<span class="hljs-string">-88</span>            [<span class="hljs-string">-1</span>, 240, 1, 1]               0
+SqueezeExcitation<span class="hljs-string">-89</span>          [<span class="hljs-string">-1</span>, 240, 14, 14]               0
+           Conv2d<span class="hljs-string">-90</span>           [<span class="hljs-string">-1</span>, 80, 14, 14]          19,200
+      BatchNorm2d<span class="hljs-string">-91</span>           [<span class="hljs-string">-1</span>, 80, 14, 14]             160
+           MBConv<span class="hljs-string">-92</span>           [<span class="hljs-string">-1</span>, 80, 14, 14]               0
+           Conv2d<span class="hljs-string">-93</span>          [<span class="hljs-string">-1</span>, 480, 14, 14]          38,400
+      BatchNorm2d<span class="hljs-string">-94</span>          [<span class="hljs-string">-1</span>, 480, 14, 14]             960
+             SiLU<span class="hljs-string">-95</span>          [<span class="hljs-string">-1</span>, 480, 14, 14]               0
+           Conv2d<span class="hljs-string">-96</span>          [<span class="hljs-string">-1</span>, 480, 14, 14]           4,320
+      BatchNorm2d<span class="hljs-string">-97</span>          [<span class="hljs-string">-1</span>, 480, 14, 14]             960
+             SiLU<span class="hljs-string">-98</span>          [<span class="hljs-string">-1</span>, 480, 14, 14]               0
+AdaptiveAvgPool2d<span class="hljs-string">-99</span>            [<span class="hljs-string">-1</span>, 480, 1, 1]               0
+          Conv2d<span class="hljs-string">-100</span>             [<span class="hljs-string">-1</span>, 20, 1, 1]           9,620
+            SiLU<span class="hljs-string">-101</span>             [<span class="hljs-string">-1</span>, 20, 1, 1]               0
+          Conv2d<span class="hljs-string">-102</span>            [<span class="hljs-string">-1</span>, 480, 1, 1]          10,080
+         Sigmoid<span class="hljs-string">-103</span>            [<span class="hljs-string">-1</span>, 480, 1, 1]               0
+SqueezeExcitation<span class="hljs-string">-104</span>          [<span class="hljs-string">-1</span>, 480, 14, 14]               0
+          Conv2d<span class="hljs-string">-105</span>           [<span class="hljs-string">-1</span>, 80, 14, 14]          38,400
+     BatchNorm2d<span class="hljs-string">-106</span>           [<span class="hljs-string">-1</span>, 80, 14, 14]             160
+ StochasticDepth<span class="hljs-string">-107</span>           [<span class="hljs-string">-1</span>, 80, 14, 14]               0
+          MBConv<span class="hljs-string">-108</span>           [<span class="hljs-string">-1</span>, 80, 14, 14]               0
+          Conv2d<span class="hljs-string">-109</span>          [<span class="hljs-string">-1</span>, 480, 14, 14]          38,400
+     BatchNorm2d<span class="hljs-string">-110</span>          [<span class="hljs-string">-1</span>, 480, 14, 14]             960
+            SiLU<span class="hljs-string">-111</span>          [<span class="hljs-string">-1</span>, 480, 14, 14]               0
+          Conv2d<span class="hljs-string">-112</span>          [<span class="hljs-string">-1</span>, 480, 14, 14]           4,320
+     BatchNorm2d<span class="hljs-string">-113</span>          [<span class="hljs-string">-1</span>, 480, 14, 14]             960
+            SiLU<span class="hljs-string">-114</span>          [<span class="hljs-string">-1</span>, 480, 14, 14]               0
+AdaptiveAvgPool2d<span class="hljs-string">-115</span>            [<span class="hljs-string">-1</span>, 480, 1, 1]               0
+          Conv2d<span class="hljs-string">-116</span>             [<span class="hljs-string">-1</span>, 20, 1, 1]           9,620
+            SiLU<span class="hljs-string">-117</span>             [<span class="hljs-string">-1</span>, 20, 1, 1]               0
+          Conv2d<span class="hljs-string">-118</span>            [<span class="hljs-string">-1</span>, 480, 1, 1]          10,080
+         Sigmoid<span class="hljs-string">-119</span>            [<span class="hljs-string">-1</span>, 480, 1, 1]               0
+SqueezeExcitation<span class="hljs-string">-120</span>          [<span class="hljs-string">-1</span>, 480, 14, 14]               0
+          Conv2d<span class="hljs-string">-121</span>           [<span class="hljs-string">-1</span>, 80, 14, 14]          38,400
+     BatchNorm2d<span class="hljs-string">-122</span>           [<span class="hljs-string">-1</span>, 80, 14, 14]             160
+ StochasticDepth<span class="hljs-string">-123</span>           [<span class="hljs-string">-1</span>, 80, 14, 14]               0
+          MBConv<span class="hljs-string">-124</span>           [<span class="hljs-string">-1</span>, 80, 14, 14]               0
+          Conv2d<span class="hljs-string">-125</span>          [<span class="hljs-string">-1</span>, 480, 14, 14]          38,400
+     BatchNorm2d<span class="hljs-string">-126</span>          [<span class="hljs-string">-1</span>, 480, 14, 14]             960
+            SiLU<span class="hljs-string">-127</span>          [<span class="hljs-string">-1</span>, 480, 14, 14]               0
+          Conv2d<span class="hljs-string">-128</span>          [<span class="hljs-string">-1</span>, 480, 14, 14]          12,000
+     BatchNorm2d<span class="hljs-string">-129</span>          [<span class="hljs-string">-1</span>, 480, 14, 14]             960
+            SiLU<span class="hljs-string">-130</span>          [<span class="hljs-string">-1</span>, 480, 14, 14]               0
+AdaptiveAvgPool2d<span class="hljs-string">-131</span>            [<span class="hljs-string">-1</span>, 480, 1, 1]               0
+          Conv2d<span class="hljs-string">-132</span>             [<span class="hljs-string">-1</span>, 20, 1, 1]           9,620
+            SiLU<span class="hljs-string">-133</span>             [<span class="hljs-string">-1</span>, 20, 1, 1]               0
+          Conv2d<span class="hljs-string">-134</span>            [<span class="hljs-string">-1</span>, 480, 1, 1]          10,080
+         Sigmoid<span class="hljs-string">-135</span>            [<span class="hljs-string">-1</span>, 480, 1, 1]               0
+SqueezeExcitation<span class="hljs-string">-136</span>          [<span class="hljs-string">-1</span>, 480, 14, 14]               0
+          Conv2d<span class="hljs-string">-137</span>          [<span class="hljs-string">-1</span>, 112, 14, 14]          53,760
+     BatchNorm2d<span class="hljs-string">-138</span>          [<span class="hljs-string">-1</span>, 112, 14, 14]             224
+          MBConv<span class="hljs-string">-139</span>          [<span class="hljs-string">-1</span>, 112, 14, 14]               0
+          Conv2d<span class="hljs-string">-140</span>          [<span class="hljs-string">-1</span>, 672, 14, 14]          75,264
+     BatchNorm2d<span class="hljs-string">-141</span>          [<span class="hljs-string">-1</span>, 672, 14, 14]           1,344
+            SiLU<span class="hljs-string">-142</span>          [<span class="hljs-string">-1</span>, 672, 14, 14]               0
+          Conv2d<span class="hljs-string">-143</span>          [<span class="hljs-string">-1</span>, 672, 14, 14]          16,800
+     BatchNorm2d<span class="hljs-string">-144</span>          [<span class="hljs-string">-1</span>, 672, 14, 14]           1,344
+            SiLU<span class="hljs-string">-145</span>          [<span class="hljs-string">-1</span>, 672, 14, 14]               0
+AdaptiveAvgPool2d<span class="hljs-string">-146</span>            [<span class="hljs-string">-1</span>, 672, 1, 1]               0
+          Conv2d<span class="hljs-string">-147</span>             [<span class="hljs-string">-1</span>, 28, 1, 1]          18,844
+            SiLU<span class="hljs-string">-148</span>             [<span class="hljs-string">-1</span>, 28, 1, 1]               0
+          Conv2d<span class="hljs-string">-149</span>            [<span class="hljs-string">-1</span>, 672, 1, 1]          19,488
+         Sigmoid<span class="hljs-string">-150</span>            [<span class="hljs-string">-1</span>, 672, 1, 1]               0
+SqueezeExcitation<span class="hljs-string">-151</span>          [<span class="hljs-string">-1</span>, 672, 14, 14]               0
+          Conv2d<span class="hljs-string">-152</span>          [<span class="hljs-string">-1</span>, 112, 14, 14]          75,264
+     BatchNorm2d<span class="hljs-string">-153</span>          [<span class="hljs-string">-1</span>, 112, 14, 14]             224
+ StochasticDepth<span class="hljs-string">-154</span>          [<span class="hljs-string">-1</span>, 112, 14, 14]               0
+          MBConv<span class="hljs-string">-155</span>          [<span class="hljs-string">-1</span>, 112, 14, 14]               0
+          Conv2d<span class="hljs-string">-156</span>          [<span class="hljs-string">-1</span>, 672, 14, 14]          75,264
+     BatchNorm2d<span class="hljs-string">-157</span>          [<span class="hljs-string">-1</span>, 672, 14, 14]           1,344
+            SiLU<span class="hljs-string">-158</span>          [<span class="hljs-string">-1</span>, 672, 14, 14]               0
+          Conv2d<span class="hljs-string">-159</span>          [<span class="hljs-string">-1</span>, 672, 14, 14]          16,800
+     BatchNorm2d<span class="hljs-string">-160</span>          [<span class="hljs-string">-1</span>, 672, 14, 14]           1,344
+            SiLU<span class="hljs-string">-161</span>          [<span class="hljs-string">-1</span>, 672, 14, 14]               0
+AdaptiveAvgPool2d<span class="hljs-string">-162</span>            [<span class="hljs-string">-1</span>, 672, 1, 1]               0
+          Conv2d<span class="hljs-string">-163</span>             [<span class="hljs-string">-1</span>, 28, 1, 1]          18,844
+            SiLU<span class="hljs-string">-164</span>             [<span class="hljs-string">-1</span>, 28, 1, 1]               0
+          Conv2d<span class="hljs-string">-165</span>            [<span class="hljs-string">-1</span>, 672, 1, 1]          19,488
+         Sigmoid<span class="hljs-string">-166</span>            [<span class="hljs-string">-1</span>, 672, 1, 1]               0
+SqueezeExcitation<span class="hljs-string">-167</span>          [<span class="hljs-string">-1</span>, 672, 14, 14]               0
+          Conv2d<span class="hljs-string">-168</span>          [<span class="hljs-string">-1</span>, 112, 14, 14]          75,264
+     BatchNorm2d<span class="hljs-string">-169</span>          [<span class="hljs-string">-1</span>, 112, 14, 14]             224
+ StochasticDepth<span class="hljs-string">-170</span>          [<span class="hljs-string">-1</span>, 112, 14, 14]               0
+          MBConv<span class="hljs-string">-171</span>          [<span class="hljs-string">-1</span>, 112, 14, 14]               0
+          Conv2d<span class="hljs-string">-172</span>          [<span class="hljs-string">-1</span>, 672, 14, 14]          75,264
+     BatchNorm2d<span class="hljs-string">-173</span>          [<span class="hljs-string">-1</span>, 672, 14, 14]           1,344
+            SiLU<span class="hljs-string">-174</span>          [<span class="hljs-string">-1</span>, 672, 14, 14]               0
+          Conv2d<span class="hljs-string">-175</span>            [<span class="hljs-string">-1</span>, 672, 7, 7]          16,800
+     BatchNorm2d<span class="hljs-string">-176</span>            [<span class="hljs-string">-1</span>, 672, 7, 7]           1,344
+            SiLU<span class="hljs-string">-177</span>            [<span class="hljs-string">-1</span>, 672, 7, 7]               0
+AdaptiveAvgPool2d<span class="hljs-string">-178</span>            [<span class="hljs-string">-1</span>, 672, 1, 1]               0
+          Conv2d<span class="hljs-string">-179</span>             [<span class="hljs-string">-1</span>, 28, 1, 1]          18,844
+            SiLU<span class="hljs-string">-180</span>             [<span class="hljs-string">-1</span>, 28, 1, 1]               0
+          Conv2d<span class="hljs-string">-181</span>            [<span class="hljs-string">-1</span>, 672, 1, 1]          19,488
+         Sigmoid<span class="hljs-string">-182</span>            [<span class="hljs-string">-1</span>, 672, 1, 1]               0
+SqueezeExcitation<span class="hljs-string">-183</span>            [<span class="hljs-string">-1</span>, 672, 7, 7]               0
+          Conv2d<span class="hljs-string">-184</span>            [<span class="hljs-string">-1</span>, 192, 7, 7]         129,024
+     BatchNorm2d<span class="hljs-string">-185</span>            [<span class="hljs-string">-1</span>, 192, 7, 7]             384
+          MBConv<span class="hljs-string">-186</span>            [<span class="hljs-string">-1</span>, 192, 7, 7]               0
+          Conv2d<span class="hljs-string">-187</span>           [<span class="hljs-string">-1</span>, 1152, 7, 7]         221,184
+     BatchNorm2d<span class="hljs-string">-188</span>           [<span class="hljs-string">-1</span>, 1152, 7, 7]           2,304
+            SiLU<span class="hljs-string">-189</span>           [<span class="hljs-string">-1</span>, 1152, 7, 7]               0
+          Conv2d<span class="hljs-string">-190</span>           [<span class="hljs-string">-1</span>, 1152, 7, 7]          28,800
+     BatchNorm2d<span class="hljs-string">-191</span>           [<span class="hljs-string">-1</span>, 1152, 7, 7]           2,304
+            SiLU<span class="hljs-string">-192</span>           [<span class="hljs-string">-1</span>, 1152, 7, 7]               0
+AdaptiveAvgPool2d<span class="hljs-string">-193</span>           [<span class="hljs-string">-1</span>, 1152, 1, 1]               0
+          Conv2d<span class="hljs-string">-194</span>             [<span class="hljs-string">-1</span>, 48, 1, 1]          55,344
+            SiLU<span class="hljs-string">-195</span>             [<span class="hljs-string">-1</span>, 48, 1, 1]               0
+          Conv2d<span class="hljs-string">-196</span>           [<span class="hljs-string">-1</span>, 1152, 1, 1]          56,448
+         Sigmoid<span class="hljs-string">-197</span>           [<span class="hljs-string">-1</span>, 1152, 1, 1]               0
+SqueezeExcitation<span class="hljs-string">-198</span>           [<span class="hljs-string">-1</span>, 1152, 7, 7]               0
+          Conv2d<span class="hljs-string">-199</span>            [<span class="hljs-string">-1</span>, 192, 7, 7]         221,184
+     BatchNorm2d<span class="hljs-string">-200</span>            [<span class="hljs-string">-1</span>, 192, 7, 7]             384
+ StochasticDepth<span class="hljs-string">-201</span>            [<span class="hljs-string">-1</span>, 192, 7, 7]               0
+          MBConv<span class="hljs-string">-202</span>            [<span class="hljs-string">-1</span>, 192, 7, 7]               0
+          Conv2d<span class="hljs-string">-203</span>           [<span class="hljs-string">-1</span>, 1152, 7, 7]         221,184
+     BatchNorm2d<span class="hljs-string">-204</span>           [<span class="hljs-string">-1</span>, 1152, 7, 7]           2,304
+            SiLU<span class="hljs-string">-205</span>           [<span class="hljs-string">-1</span>, 1152, 7, 7]               0
+          Conv2d<span class="hljs-string">-206</span>           [<span class="hljs-string">-1</span>, 1152, 7, 7]          28,800
+     BatchNorm2d<span class="hljs-string">-207</span>           [<span class="hljs-string">-1</span>, 1152, 7, 7]           2,304
+            SiLU<span class="hljs-string">-208</span>           [<span class="hljs-string">-1</span>, 1152, 7, 7]               0
+AdaptiveAvgPool2d<span class="hljs-string">-209</span>           [<span class="hljs-string">-1</span>, 1152, 1, 1]               0
+          Conv2d<span class="hljs-string">-210</span>             [<span class="hljs-string">-1</span>, 48, 1, 1]          55,344
+            SiLU<span class="hljs-string">-211</span>             [<span class="hljs-string">-1</span>, 48, 1, 1]               0
+          Conv2d<span class="hljs-string">-212</span>           [<span class="hljs-string">-1</span>, 1152, 1, 1]          56,448
+         Sigmoid<span class="hljs-string">-213</span>           [<span class="hljs-string">-1</span>, 1152, 1, 1]               0
+SqueezeExcitation<span class="hljs-string">-214</span>           [<span class="hljs-string">-1</span>, 1152, 7, 7]               0
+          Conv2d<span class="hljs-string">-215</span>            [<span class="hljs-string">-1</span>, 192, 7, 7]         221,184
+     BatchNorm2d<span class="hljs-string">-216</span>            [<span class="hljs-string">-1</span>, 192, 7, 7]             384
+ StochasticDepth<span class="hljs-string">-217</span>            [<span class="hljs-string">-1</span>, 192, 7, 7]               0
+          MBConv<span class="hljs-string">-218</span>            [<span class="hljs-string">-1</span>, 192, 7, 7]               0
+          Conv2d<span class="hljs-string">-219</span>           [<span class="hljs-string">-1</span>, 1152, 7, 7]         221,184
+     BatchNorm2d<span class="hljs-string">-220</span>           [<span class="hljs-string">-1</span>, 1152, 7, 7]           2,304
+            SiLU<span class="hljs-string">-221</span>           [<span class="hljs-string">-1</span>, 1152, 7, 7]               0
+          Conv2d<span class="hljs-string">-222</span>           [<span class="hljs-string">-1</span>, 1152, 7, 7]          28,800
+     BatchNorm2d<span class="hljs-string">-223</span>           [<span class="hljs-string">-1</span>, 1152, 7, 7]           2,304
+            SiLU<span class="hljs-string">-224</span>           [<span class="hljs-string">-1</span>, 1152, 7, 7]               0
+AdaptiveAvgPool2d<span class="hljs-string">-225</span>           [<span class="hljs-string">-1</span>, 1152, 1, 1]               0
+          Conv2d<span class="hljs-string">-226</span>             [<span class="hljs-string">-1</span>, 48, 1, 1]          55,344
+            SiLU<span class="hljs-string">-227</span>             [<span class="hljs-string">-1</span>, 48, 1, 1]               0
+          Conv2d<span class="hljs-string">-228</span>           [<span class="hljs-string">-1</span>, 1152, 1, 1]          56,448
+         Sigmoid<span class="hljs-string">-229</span>           [<span class="hljs-string">-1</span>, 1152, 1, 1]               0
+SqueezeExcitation<span class="hljs-string">-230</span>           [<span class="hljs-string">-1</span>, 1152, 7, 7]               0
+          Conv2d<span class="hljs-string">-231</span>            [<span class="hljs-string">-1</span>, 192, 7, 7]         221,184
+     BatchNorm2d<span class="hljs-string">-232</span>            [<span class="hljs-string">-1</span>, 192, 7, 7]             384
+ StochasticDepth<span class="hljs-string">-233</span>            [<span class="hljs-string">-1</span>, 192, 7, 7]               0
+          MBConv<span class="hljs-string">-234</span>            [<span class="hljs-string">-1</span>, 192, 7, 7]               0
+          Conv2d<span class="hljs-string">-235</span>           [<span class="hljs-string">-1</span>, 1152, 7, 7]         221,184
+     BatchNorm2d<span class="hljs-string">-236</span>           [<span class="hljs-string">-1</span>, 1152, 7, 7]           2,304
+            SiLU<span class="hljs-string">-237</span>           [<span class="hljs-string">-1</span>, 1152, 7, 7]               0
+          Conv2d<span class="hljs-string">-238</span>           [<span class="hljs-string">-1</span>, 1152, 7, 7]          10,368
+     BatchNorm2d<span class="hljs-string">-239</span>           [<span class="hljs-string">-1</span>, 1152, 7, 7]           2,304
+            SiLU<span class="hljs-string">-240</span>           [<span class="hljs-string">-1</span>, 1152, 7, 7]               0
+AdaptiveAvgPool2d<span class="hljs-string">-241</span>           [<span class="hljs-string">-1</span>, 1152, 1, 1]               0
+          Conv2d<span class="hljs-string">-242</span>             [<span class="hljs-string">-1</span>, 48, 1, 1]          55,344
+            SiLU<span class="hljs-string">-243</span>             [<span class="hljs-string">-1</span>, 48, 1, 1]               0
+          Conv2d<span class="hljs-string">-244</span>           [<span class="hljs-string">-1</span>, 1152, 1, 1]          56,448
+         Sigmoid<span class="hljs-string">-245</span>           [<span class="hljs-string">-1</span>, 1152, 1, 1]               0
+SqueezeExcitation<span class="hljs-string">-246</span>           [<span class="hljs-string">-1</span>, 1152, 7, 7]               0
+          Conv2d<span class="hljs-string">-247</span>            [<span class="hljs-string">-1</span>, 320, 7, 7]         368,640
+     BatchNorm2d<span class="hljs-string">-248</span>            [<span class="hljs-string">-1</span>, 320, 7, 7]             640
+          MBConv<span class="hljs-string">-249</span>            [<span class="hljs-string">-1</span>, 320, 7, 7]               0
+          Conv2d<span class="hljs-string">-250</span>           [<span class="hljs-string">-1</span>, 1280, 7, 7]         409,600
+     BatchNorm2d<span class="hljs-string">-251</span>           [<span class="hljs-string">-1</span>, 1280, 7, 7]           2,560
+            SiLU<span class="hljs-string">-252</span>           [<span class="hljs-string">-1</span>, 1280, 7, 7]               0
+AdaptiveAvgPool2d<span class="hljs-string">-253</span>           [<span class="hljs-string">-1</span>, 1280, 1, 1]               0
+         Dropout<span class="hljs-string">-254</span>                 [<span class="hljs-string">-1</span>, 1280]               0
+          Linear<span class="hljs-string">-255</span>                    [<span class="hljs-string">-1</span>, 5]           6,405
+================================================================
+Total params: 4,013,953
+Trainable params: 6,405
+Non-trainable params: 4,007,548
+----------------------------------------------------------------
+Input size (MB): 0.57
+Forward/backward pass size (MB): 173.64
+Params size (MB): 15.31
+Estimated Total Size (MB): 189.53
+----------------------------------------------------------------
+</code></pre>
+  <h3 id="4-3-training-using-train-data-and-evaluating-using-validation-data">4.3 Training using train data and
+    evaluating using validation data</h3>
+  <p>Train your model for minimum 3 epochs.</p>
+  <pre><code class="lang-python"><span class="hljs-comment"># TODO </span>
+model, loss_list, acc_list,loss_list_val,<span class="hljs-attr">acc_list_val</span> = train_model(model, criterion, optimizer_conv,
+                         exp_lr_scheduler, <span class="hljs-attr">num_epochs=10)</span>
+</code></pre>
+  <pre><code><span class="hljs-section">Epoch 0/9
+----------</span>
+train Loss: 1.5756 Acc: 0.2820
+val Loss: 1.4160 Acc: 0.6000
+Time:20.401331424713135
+
+<span class="hljs-section">Epoch 1/9
+----------</span>
+train Loss: 1.3125 Acc: 0.6000
+val Loss: 1.0490 Acc: 0.8333
+Time:20.885517835617065
+
+<span class="hljs-section">Epoch 2/9
+----------</span>
+train Loss: 1.0223 Acc: 0.7260
+val Loss: 0.8065 Acc: 0.8667
+Time:21.890202522277832
+
+<span class="hljs-section">Epoch 3/9
+----------</span>
+train Loss: 0.8658 Acc: 0.7620
+val Loss: 0.6793 Acc: 0.8467
+Time:23.46907925605774
+
+<span class="hljs-section">Epoch 4/9
+----------</span>
+train Loss: 0.7912 Acc: 0.7740
+val Loss: 0.6099 Acc: 0.8600
+Time:22.48347234725952
+
+<span class="hljs-section">Epoch 5/9
+----------</span>
+train Loss: 0.6790 Acc: 0.7800
+val Loss: 0.5530 Acc: 0.8800
+Time:22.146708488464355
+
+<span class="hljs-section">Epoch 6/9
+----------</span>
+train Loss: 0.6550 Acc: 0.8020
+val Loss: 0.5244 Acc: 0.8600
+Time:22.207488298416138
+
+<span class="hljs-section">Epoch 7/9
+----------</span>
+train Loss: 0.5863 Acc: 0.8240
+val Loss: 0.5228 Acc: 0.8533
+Time:22.06390953063965
+
+<span class="hljs-section">Epoch 8/9
+----------</span>
+train Loss: 0.6285 Acc: 0.7920
+val Loss: 0.5232 Acc: 0.8667
+Time:21.94082999229431
+
+<span class="hljs-section">Epoch 9/9
+----------</span>
+train Loss: 0.6448 Acc: 0.7820
+val Loss: 0.5187 Acc: 0.8600
+Time:22.887908458709717
+
+Training complete in 3m 40s
+Best val Acc: 0.880000
+</code></pre>
+  <h2 id="5-loading-test-data">5. Loading test data</h2>
+  <p>Define the dataset and dataloader for testing.</p>
+  <pre><code class="lang-python"><span class="hljs-attr">test_dir</span> = os.path.join(<span class="hljs-string">'./'</span>, <span class="hljs-string">'sg_food'</span>, <span class="hljs-string">'test'</span>)
+
+<span class="hljs-comment"># Define the test set.</span>
+<span class="hljs-attr">test_dataset</span> = sg_food_dataset(root=test_dir, class_id=selected_classes, transform=data_transforms[<span class="hljs-string">'val'</span>])
+<span class="hljs-attr">test_sizes</span> = len(test_dataset)
+
+<span class="hljs-comment"># Define the dataloader for testing.</span>
+<span class="hljs-attr">test_batch_size</span> = <span class="hljs-number">64</span>
+<span class="hljs-attr">test_loader</span> = torch.utils.data.DataLoader(test_dataset, batch_size=test_batch_size, shuffle=<span class="hljs-literal">True</span>, num_workers=<span class="hljs-number">0</span>)
+</code></pre>
+  <h2 id="6-visualizing-the-predictions">6. Visualizing the predictions</h2>
+  <p>Predict the label on a few testing samples and visualize the results.</p>
+  <pre><code class="lang-python"># TODO
+
+# num_images = <span class="hljs-number">4</span>
+
+# (<span class="hljs-keyword">code</span>)
+
+# <span class="hljs-keyword">with</span> torch.no_grad():
+    # Predict on the test set
+
+    # (<span class="hljs-keyword">code</span>)
+
+    # Print the output images and labels
+
+    # (<span class="hljs-keyword">code</span>)
+
+visualize_model(mobilenet_v3_small)
+
+plt.ioff()
+plt.show()
+</code></pre>
+  <p><img src="output_24_0.png" alt="png"></p>
+  <p><img src="output_24_1.png" alt="png"></p>
+  <p><img src="output_24_2.png" alt="png"></p>
+  <p><img src="output_24_3.png" alt="png"></p>
+  <p><img src="output_24_4.png" alt="png"></p>
+  <p><img src="output_24_5.png" alt="png"></p>
+  <h2 id="7-evaluating-on-test-set">7. Evaluating on test set</h2>
+  <p>Evaluate your model on the whole test set and compute the accuracy.</p>
+  <pre><code class="lang-python">model.eval()
+
+<span class="hljs-attr">test_acc</span> = <span class="hljs-number">0</span>
+
+print('Evaluation')
+print('-' * <span class="hljs-number">10</span>)
+
+<span class="hljs-attr">y_true</span> = []
+<span class="hljs-attr">y_pred</span> = []
+
+<span class="hljs-attr">wrong_detections</span> = []
+<span class="hljs-attr">correct_detections</span> = []
+
+<span class="hljs-keyword">with</span> torch.no_grad():
+    <span class="hljs-comment"># Iterate over the testing dataset.</span>
+    for (inputs, labels) <span class="hljs-keyword">in</span> test_loader:
+        <span class="hljs-attr">inputs</span> = inputs.to(device)
+        <span class="hljs-comment"># Predict on the test set</span>
+        <span class="hljs-attr">outputs</span> = model(inputs)
+        _, <span class="hljs-attr">preds</span> = torch.max(outputs, <span class="hljs-number">1</span>)
+        <span class="hljs-attr">preds</span> = preds.cpu()
+
+        <span class="hljs-comment"># Confusion Matrix</span>
+
+        y_true.extend(preds.numpy())
+        y_pred.extend(labels.data.numpy())
+
+        test_acc += torch.sum(<span class="hljs-attr">preds</span> == labels.data)
+
+<span class="hljs-comment"># Compute the testing accuracy</span>
+<span class="hljs-attr">test_acc</span> = test_acc.double() / test_sizes
+print('Testing Acc: {:.<span class="hljs-number">4</span>f}'.format(test_acc))
+</code></pre>
+  <pre><code><span class="hljs-section">Evaluation
+----------</span>
+Testing Acc: 0.8338
+</code></pre>
+  <h1 id="graphing-metrics">Graphing Metrics</h1>
+  <h3 id="plotting-loss-vs-iteration-train">Plotting Loss vs Iteration - Train</h3>
+  <pre><code class="lang-python"><span class="hljs-built_in">iterations</span> = []
+
+<span class="hljs-keyword">for</span> i,loss <span class="hljs-keyword">in</span> enumerate(loss_list):
+    <span class="hljs-built_in">iterations</span>.<span class="hljs-built_in">append</span>(i)
+</code></pre>
+  <pre><code class="lang-python"><span class="hljs-attribute">iterations</span>
+</code></pre>
+  <pre><code>[<span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>, <span class="hljs-number">4</span>, <span class="hljs-number">5</span>, <span class="hljs-number">6</span>, <span class="hljs-number">7</span>, <span class="hljs-number">8</span>, <span class="hljs-number">9</span>]
+</code></pre>
+  <pre><code class="lang-python">fig, ax = plt.subplots()
+ax.plot(<span class="hljs-built_in">iterations</span>, loss_list)
+
+ax.set(<span class="hljs-built_in">xlabel</span>='Iterations', <span class="hljs-built_in">ylabel</span>='Loss value',
+       <span class="hljs-built_in">title</span>='Iteration vs Loss Train')
+ax.<span class="hljs-built_in">grid</span>()
+
+plt.<span class="hljs-built_in">show</span>()
+</code></pre>
+  <p><img src="output_31_0.png" alt="png"></p>
+  <h3 id="plotting-loss-vs-iteration-val">Plotting Loss vs Iteration - Val</h3>
+  <pre><code class="lang-python"><span class="hljs-built_in">iterations</span> = []
+
+<span class="hljs-keyword">for</span> i,loss <span class="hljs-keyword">in</span> enumerate(loss_list_val):
+    <span class="hljs-built_in">iterations</span>.<span class="hljs-built_in">append</span>(i)
+</code></pre>
+  <pre><code class="lang-python">fig, ax = plt.subplots()
+ax.plot(<span class="hljs-built_in">iterations</span>, loss_list_val)
+
+ax.set(<span class="hljs-built_in">xlabel</span>='Iterations', <span class="hljs-built_in">ylabel</span>='Loss value',
+       <span class="hljs-built_in">title</span>='Iteration vs Loss - Val')
+ax.<span class="hljs-built_in">grid</span>()
+
+plt.<span class="hljs-built_in">show</span>()
+</code></pre>
+  <p><img src="output_34_0.png" alt="png"></p>
+  <h3 id="plotting-accuracy-vs-iteration-train">Plotting Accuracy vs Iteration - Train</h3>
+  <pre><code class="lang-python"><span class="hljs-built_in">iterations</span> = []
+
+<span class="hljs-keyword">for</span> i,loss <span class="hljs-keyword">in</span> enumerate(acc_list):
+    <span class="hljs-built_in">iterations</span>.<span class="hljs-built_in">append</span>(i)
+</code></pre>
+  <pre><code class="lang-python">fig, ax = plt.subplots()
+ax.plot(<span class="hljs-built_in">iterations</span>, acc_list)
+
+ax.set(<span class="hljs-built_in">xlabel</span>='Iterations', <span class="hljs-built_in">ylabel</span>='Accuracy value',
+       <span class="hljs-built_in">title</span>='Iteration vs Accuracy - Train')
+ax.<span class="hljs-built_in">grid</span>()
+
+plt.<span class="hljs-built_in">show</span>()
+</code></pre>
+  <p><img src="output_37_0.png" alt="png"></p>
+  <h3 id="plotting-accuracy-vs-iteration-val">Plotting Accuracy vs Iteration - Val</h3>
+  <pre><code class="lang-python"><span class="hljs-built_in">iterations</span> = []
+
+<span class="hljs-keyword">for</span> i,loss <span class="hljs-keyword">in</span> enumerate(acc_list_val):
+    <span class="hljs-built_in">iterations</span>.<span class="hljs-built_in">append</span>(i)
+</code></pre>
+  <pre><code class="lang-python">fig, ax = plt.subplots()
+ax.plot(<span class="hljs-built_in">iterations</span>, acc_list_val)
+
+ax.set(<span class="hljs-built_in">xlabel</span>='Iterations', <span class="hljs-built_in">ylabel</span>='Accuracy value',
+       <span class="hljs-built_in">title</span>='Iteration vs Accuracy - Val')
+ax.<span class="hljs-built_in">grid</span>()
+
+plt.<span class="hljs-built_in">show</span>()
+</code></pre>
+  <p><img src="output_40_0.png" alt="png"></p>
+  <h3 id="generating-confusion-matrix">Generating Confusion Matrix</h3>
+  <pre><code class="lang-python"><span class="hljs-title">from</span> sklearn.metrics <span class="hljs-keyword">import</span> confusion_matrix
+<span class="hljs-keyword">import</span> seaborn <span class="hljs-keyword">as</span> sn
+<span class="hljs-keyword">import</span> pandas <span class="hljs-keyword">as</span> pd
+</code></pre>
+  <pre><code class="lang-python"><span class="hljs-function"><span class="hljs-title">len</span><span class="hljs-params">(y_pred)</span></span>
+</code></pre>
+  <pre><code><span class="hljs-number">999</span>
+</code></pre>
+  <pre><code class="lang-python"><span class="hljs-attr">cf_matrix</span> = confusion_matrix(y_<span class="hljs-literal">true</span>, y_pred)
+</code></pre>
+  <pre><code class="lang-python">
+</code></pre>
+  <pre><code class="lang-python"><span class="hljs-comment"># constant for classes</span>
+<span class="hljs-comment"># classes = ()</span>
+
+<span class="hljs-comment"># Build confusion matrix</span>
+<span class="hljs-attr">cf_matrix</span> = confusion_matrix(y_true, y_pred)
+<span class="hljs-attr">df_cm</span> = pd.DataFrame(cf_matrix, <span class="hljs-attr">index</span> = [i for i <span class="hljs-keyword">in</span> class_names],
+                     <span class="hljs-attr">columns</span> = [i for i <span class="hljs-keyword">in</span> class_names])
+plt.figure(<span class="hljs-attr">figsize</span> = (<span class="hljs-number">12</span>,<span class="hljs-number">7</span>))
+sn.heatmap(df_cm,<span class="hljs-attr">fmt='',</span> <span class="hljs-attr">annot=True)</span>
+plt.savefig('effnetb0_output.png')
+</code></pre>
+  <p><img src="output_46_0.png" alt="png"></p>
+  <h3 id="prediction-examples">Prediction Examples</h3>
+  <pre><code class="lang-python"><span class="hljs-attr">predictions</span> = pd.DataFrame({<span class="hljs-string">'Actual'</span>:y_<span class="hljs-literal">true</span>,<span class="hljs-string">'Predicted'</span>:y_pred})
+</code></pre>
+  <pre><code class="lang-python"><span class="hljs-selector-tag">predictions</span><span class="hljs-selector-class">.head</span>()
+</code></pre>
+  <div>
+    <style scoped>
+      .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+      }
+
+      .dataframe tbody tr th {
+        vertical-align: top;
+      }
+
+      .dataframe thead th {
+        text-align: right;
+      }
+    </style>
+    <table border="1" class="dataframe">
+      <thead>
+        <tr style="text-align: right;">
+          <th></th>
+          <th>Actual</th>
+          <th>Predicted</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th>0</th>
+          <td>4</td>
+          <td>4</td>
+        </tr>
+        <tr>
+          <th>1</th>
+          <td>0</td>
+          <td>0</td>
+        </tr>
+        <tr>
+          <th>2</th>
+          <td>2</td>
+          <td>2</td>
+        </tr>
+        <tr>
+          <th>3</th>
+          <td>2</td>
+          <td>3</td>
+        </tr>
+        <tr>
+          <th>4</th>
+          <td>1</td>
+          <td>3</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+
+
+
+  <pre><code class="lang-python">!<span class="hljs-built_in">export</span> PATH=/Library/TeX/texbin:<span class="hljs-variable">$PATH</span>
+</code></pre>
+  <pre><code class="lang-python">!pip3 <span class="hljs-keyword">install</span> nbconvert
+</code></pre>
+  <pre><code>Requirement already <span class="hljs-string">satisfied:</span> nbconvert <span class="hljs-keyword">in</span> <span class="hljs-regexp">/home/</span>aishik<span class="hljs-regexp">/.local/</span>lib<span class="hljs-regexp">/python3.8/</span>site-packages (<span class="hljs-number">6.3</span><span class="hljs-number">.0</span>)
+Requirement already <span class="hljs-string">satisfied:</span> nbclient&lt;<span class="hljs-number">0.6</span><span class="hljs-number">.0</span>,&gt;=<span class="hljs-number">0.5</span><span class="hljs-number">.0</span> <span class="hljs-keyword">in</span> <span class="hljs-regexp">/home/</span>aishik<span class="hljs-regexp">/.local/</span>lib<span class="hljs-regexp">/python3.8/</span>site-packages (from nbconvert) (<span class="hljs-number">0.5</span><span class="hljs-number">.9</span>)
+Requirement already <span class="hljs-string">satisfied:</span> entrypoints&gt;=<span class="hljs-number">0.2</span><span class="hljs-number">.2</span> <span class="hljs-keyword">in</span> <span class="hljs-regexp">/usr/</span>lib<span class="hljs-regexp">/python3/</span>dist-packages (from nbconvert) (<span class="hljs-number">0.3</span>)
+Requirement already <span class="hljs-string">satisfied:</span> jupyterlab-pygments <span class="hljs-keyword">in</span> <span class="hljs-regexp">/home/</span>aishik<span class="hljs-regexp">/.local/</span>lib<span class="hljs-regexp">/python3.8/</span>site-packages (from nbconvert) (<span class="hljs-number">0.1</span><span class="hljs-number">.2</span>)
+Requirement already <span class="hljs-string">satisfied:</span> testpath <span class="hljs-keyword">in</span> <span class="hljs-regexp">/home/</span>aishik<span class="hljs-regexp">/.local/</span>lib<span class="hljs-regexp">/python3.8/</span>site-packages (from nbconvert) (<span class="hljs-number">0.5</span><span class="hljs-number">.0</span>)
+Requirement already <span class="hljs-string">satisfied:</span> mistune&lt;<span class="hljs-number">2</span>,&gt;=<span class="hljs-number">0.8</span><span class="hljs-number">.1</span> <span class="hljs-keyword">in</span> <span class="hljs-regexp">/home/</span>aishik<span class="hljs-regexp">/.local/</span>lib<span class="hljs-regexp">/python3.8/</span>site-packages (from nbconvert) (<span class="hljs-number">0.8</span><span class="hljs-number">.4</span>)
+Requirement already <span class="hljs-string">satisfied:</span> defusedxml <span class="hljs-keyword">in</span> <span class="hljs-regexp">/home/</span>aishik<span class="hljs-regexp">/.local/</span>lib<span class="hljs-regexp">/python3.8/</span>site-packages (from nbconvert) (<span class="hljs-number">0.7</span><span class="hljs-number">.1</span>)
+Requirement already <span class="hljs-string">satisfied:</span> jupyter-core <span class="hljs-keyword">in</span> <span class="hljs-regexp">/home/</span>aishik<span class="hljs-regexp">/.local/</span>lib<span class="hljs-regexp">/python3.8/</span>site-packages (from nbconvert) (<span class="hljs-number">4.9</span><span class="hljs-number">.1</span>)
+Requirement already <span class="hljs-string">satisfied:</span> traitlets&gt;=<span class="hljs-number">5.0</span> <span class="hljs-keyword">in</span> <span class="hljs-regexp">/home/</span>aishik<span class="hljs-regexp">/.local/</span>lib<span class="hljs-regexp">/python3.8/</span>site-packages (from nbconvert) (<span class="hljs-number">5.1</span><span class="hljs-number">.1</span>)
+Requirement already <span class="hljs-string">satisfied:</span> nbformat&gt;=<span class="hljs-number">4.4</span> <span class="hljs-keyword">in</span> <span class="hljs-regexp">/home/</span>aishik<span class="hljs-regexp">/.local/</span>lib<span class="hljs-regexp">/python3.8/</span>site-packages (from nbconvert) (<span class="hljs-number">5.1</span><span class="hljs-number">.3</span>)
+Requirement already <span class="hljs-string">satisfied:</span> jinja2&gt;=<span class="hljs-number">2.4</span> <span class="hljs-keyword">in</span> <span class="hljs-regexp">/home/</span>aishik<span class="hljs-regexp">/.local/</span>lib<span class="hljs-regexp">/python3.8/</span>site-packages (from nbconvert) (<span class="hljs-number">2.11</span><span class="hljs-number">.3</span>)
+Requirement already <span class="hljs-string">satisfied:</span> bleach <span class="hljs-keyword">in</span> <span class="hljs-regexp">/home/</span>aishik<span class="hljs-regexp">/.local/</span>lib<span class="hljs-regexp">/python3.8/</span>site-packages (from nbconvert) (<span class="hljs-number">4.1</span><span class="hljs-number">.0</span>)
+Requirement already <span class="hljs-string">satisfied:</span> pygments&gt;=<span class="hljs-number">2.4</span><span class="hljs-number">.1</span> <span class="hljs-keyword">in</span> <span class="hljs-regexp">/home/</span>aishik<span class="hljs-regexp">/.local/</span>lib<span class="hljs-regexp">/python3.8/</span>site-packages (from nbconvert) (<span class="hljs-number">2.10</span><span class="hljs-number">.0</span>)
+Requirement already <span class="hljs-string">satisfied:</span> pandocfilters&gt;=<span class="hljs-number">1.4</span><span class="hljs-number">.1</span> <span class="hljs-keyword">in</span> <span class="hljs-regexp">/home/</span>aishik<span class="hljs-regexp">/.local/</span>lib<span class="hljs-regexp">/python3.8/</span>site-packages (from nbconvert) (<span class="hljs-number">1.5</span><span class="hljs-number">.0</span>)
+Requirement already <span class="hljs-string">satisfied:</span> jupyter-client&gt;=<span class="hljs-number">6.1</span><span class="hljs-number">.5</span> <span class="hljs-keyword">in</span> <span class="hljs-regexp">/home/</span>aishik<span class="hljs-regexp">/.local/</span>lib<span class="hljs-regexp">/python3.8/</span>site-packages (from nbclient&lt;<span class="hljs-number">0.6</span><span class="hljs-number">.0</span>,&gt;=<span class="hljs-number">0.5</span><span class="hljs-number">.0</span>-&gt;nbconvert) (<span class="hljs-number">7.1</span><span class="hljs-number">.0</span>)
+Requirement already <span class="hljs-string">satisfied:</span> nest-asyncio <span class="hljs-keyword">in</span> <span class="hljs-regexp">/home/</span>aishik<span class="hljs-regexp">/.local/</span>lib<span class="hljs-regexp">/python3.8/</span>site-packages (from nbclient&lt;<span class="hljs-number">0.6</span><span class="hljs-number">.0</span>,&gt;=<span class="hljs-number">0.5</span><span class="hljs-number">.0</span>-&gt;nbconvert) (<span class="hljs-number">1.5</span><span class="hljs-number">.4</span>)
+Requirement already <span class="hljs-string">satisfied:</span> ipython-genutils <span class="hljs-keyword">in</span> <span class="hljs-regexp">/home/</span>aishik<span class="hljs-regexp">/.local/</span>lib<span class="hljs-regexp">/python3.8/</span>site-packages (from nbformat&gt;=<span class="hljs-number">4.4</span>-&gt;nbconvert) (<span class="hljs-number">0.2</span><span class="hljs-number">.0</span>)
+Requirement already <span class="hljs-string">satisfied:</span> jsonschema!=<span class="hljs-number">2.5</span><span class="hljs-number">.0</span>,&gt;=<span class="hljs-number">2.4</span> <span class="hljs-keyword">in</span> <span class="hljs-regexp">/home/</span>aishik<span class="hljs-regexp">/.local/</span>lib<span class="hljs-regexp">/python3.8/</span>site-packages (from nbformat&gt;=<span class="hljs-number">4.4</span>-&gt;nbconvert) (<span class="hljs-number">4.2</span><span class="hljs-number">.1</span>)
+Requirement already <span class="hljs-string">satisfied:</span> MarkupSafe&gt;=<span class="hljs-number">0.23</span> <span class="hljs-keyword">in</span> <span class="hljs-regexp">/home/</span>aishik<span class="hljs-regexp">/.local/</span>lib<span class="hljs-regexp">/python3.8/</span>site-packages (from jinja2&gt;=<span class="hljs-number">2.4</span>-&gt;nbconvert) (<span class="hljs-number">2.0</span><span class="hljs-number">.1</span>)
+Requirement already <span class="hljs-string">satisfied:</span> packaging <span class="hljs-keyword">in</span> <span class="hljs-regexp">/home/</span>aishik<span class="hljs-regexp">/.local/</span>lib<span class="hljs-regexp">/python3.8/</span>site-packages (from bleach-&gt;nbconvert) (<span class="hljs-number">21.3</span>)
+Requirement already <span class="hljs-string">satisfied:</span> six&gt;=<span class="hljs-number">1.9</span><span class="hljs-number">.0</span> <span class="hljs-keyword">in</span> <span class="hljs-regexp">/home/</span>aishik<span class="hljs-regexp">/.local/</span>lib<span class="hljs-regexp">/python3.8/</span>site-packages (from bleach-&gt;nbconvert) (<span class="hljs-number">1.16</span><span class="hljs-number">.0</span>)
+Requirement already <span class="hljs-string">satisfied:</span> webencodings <span class="hljs-keyword">in</span> <span class="hljs-regexp">/home/</span>aishik<span class="hljs-regexp">/.local/</span>lib<span class="hljs-regexp">/python3.8/</span>site-packages (from bleach-&gt;nbconvert) (<span class="hljs-number">0.5</span><span class="hljs-number">.1</span>)
+Requirement already <span class="hljs-string">satisfied:</span> tornado&gt;=<span class="hljs-number">4.1</span> <span class="hljs-keyword">in</span> <span class="hljs-regexp">/home/</span>aishik<span class="hljs-regexp">/.local/</span>lib<span class="hljs-regexp">/python3.8/</span>site-packages (from jupyter-client&gt;=<span class="hljs-number">6.1</span><span class="hljs-number">.5</span>-&gt;nbclient&lt;<span class="hljs-number">0.6</span><span class="hljs-number">.0</span>,&gt;=<span class="hljs-number">0.5</span><span class="hljs-number">.0</span>-&gt;nbconvert) (<span class="hljs-number">6.1</span>)
+Requirement already <span class="hljs-string">satisfied:</span> pyzmq&gt;=<span class="hljs-number">13</span> <span class="hljs-keyword">in</span> <span class="hljs-regexp">/home/</span>aishik<span class="hljs-regexp">/.local/</span>lib<span class="hljs-regexp">/python3.8/</span>site-packages (from jupyter-client&gt;=<span class="hljs-number">6.1</span><span class="hljs-number">.5</span>-&gt;nbclient&lt;<span class="hljs-number">0.6</span><span class="hljs-number">.0</span>,&gt;=<span class="hljs-number">0.5</span><span class="hljs-number">.0</span>-&gt;nbconvert) (<span class="hljs-number">22.3</span><span class="hljs-number">.0</span>)
+Requirement already <span class="hljs-string">satisfied:</span> python-dateutil&gt;=<span class="hljs-number">2.1</span> <span class="hljs-keyword">in</span> <span class="hljs-regexp">/home/</span>aishik<span class="hljs-regexp">/.local/</span>lib<span class="hljs-regexp">/python3.8/</span>site-packages (from jupyter-client&gt;=<span class="hljs-number">6.1</span><span class="hljs-number">.5</span>-&gt;nbclient&lt;<span class="hljs-number">0.6</span><span class="hljs-number">.0</span>,&gt;=<span class="hljs-number">0.5</span><span class="hljs-number">.0</span>-&gt;nbconvert) (<span class="hljs-number">2.8</span><span class="hljs-number">.2</span>)
+Requirement already <span class="hljs-string">satisfied:</span> pyrsistent!=<span class="hljs-number">0.17</span><span class="hljs-number">.0</span>,!=<span class="hljs-number">0.17</span><span class="hljs-number">.1</span>,!=<span class="hljs-number">0.17</span><span class="hljs-number">.2</span>,&gt;=<span class="hljs-number">0.14</span><span class="hljs-number">.0</span> <span class="hljs-keyword">in</span> <span class="hljs-regexp">/home/</span>aishik<span class="hljs-regexp">/.local/</span>lib<span class="hljs-regexp">/python3.8/</span>site-packages (from jsonschema!=<span class="hljs-number">2.5</span><span class="hljs-number">.0</span>,&gt;=<span class="hljs-number">2.4</span>-&gt;nbformat&gt;=<span class="hljs-number">4.4</span>-&gt;nbconvert) (<span class="hljs-number">0.18</span><span class="hljs-number">.0</span>)
+Requirement already <span class="hljs-string">satisfied:</span> attrs&gt;=<span class="hljs-number">17.4</span><span class="hljs-number">.0</span> <span class="hljs-keyword">in</span> <span class="hljs-regexp">/home/</span>aishik<span class="hljs-regexp">/.local/</span>lib<span class="hljs-regexp">/python3.8/</span>site-packages (from jsonschema!=<span class="hljs-number">2.5</span><span class="hljs-number">.0</span>,&gt;=<span class="hljs-number">2.4</span>-&gt;nbformat&gt;=<span class="hljs-number">4.4</span>-&gt;nbconvert) (<span class="hljs-number">21.2</span><span class="hljs-number">.0</span>)
+Requirement already <span class="hljs-string">satisfied:</span> importlib-resources&gt;=<span class="hljs-number">1.4</span><span class="hljs-number">.0</span>; python_version &lt; <span class="hljs-string">"3.9"</span> <span class="hljs-keyword">in</span> <span class="hljs-regexp">/home/</span>aishik<span class="hljs-regexp">/.local/</span>lib<span class="hljs-regexp">/python3.8/</span>site-packages (from jsonschema!=<span class="hljs-number">2.5</span><span class="hljs-number">.0</span>,&gt;=<span class="hljs-number">2.4</span>-&gt;nbformat&gt;=<span class="hljs-number">4.4</span>-&gt;nbconvert) (<span class="hljs-number">5.4</span><span class="hljs-number">.0</span>)
+Requirement already <span class="hljs-string">satisfied:</span> pyparsing!=<span class="hljs-number">3.0</span><span class="hljs-number">.5</span>,&gt;=<span class="hljs-number">2.0</span><span class="hljs-number">.2</span> <span class="hljs-keyword">in</span> <span class="hljs-regexp">/home/</span>aishik<span class="hljs-regexp">/.local/</span>lib<span class="hljs-regexp">/python3.8/</span>site-packages (from packaging-&gt;bleach-&gt;nbconvert) (<span class="hljs-number">3.0</span><span class="hljs-number">.6</span>)
+Requirement already <span class="hljs-string">satisfied:</span> zipp&gt;=<span class="hljs-number">3.1</span><span class="hljs-number">.0</span>; python_version &lt; <span class="hljs-string">"3.10"</span> <span class="hljs-keyword">in</span> <span class="hljs-regexp">/home/</span>aishik<span class="hljs-regexp">/.local/</span>lib<span class="hljs-regexp">/python3.8/</span>site-packages (from importlib-resources&gt;=<span class="hljs-number">1.4</span><span class="hljs-number">.0</span>; python_version &lt; <span class="hljs-string">"3.9"</span>-&gt;jsonschema!=<span class="hljs-number">2.5</span><span class="hljs-number">.0</span>,&gt;=<span class="hljs-number">2.4</span>-&gt;nbformat&gt;=<span class="hljs-number">4.4</span>-&gt;nbconvert) (<span class="hljs-number">3.6</span><span class="hljs-number">.0</span>)
+</code></pre>
+  <pre><code class="lang-python">
+</code></pre>
+</body>
+
+</html>

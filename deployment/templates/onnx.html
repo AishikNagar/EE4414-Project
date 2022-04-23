@@ -1,0 +1,1222 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta charset="utf-8" name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <!-- Required meta tags -->
+  <!-- <meta charset="utf-8" name="viewport" content="width=device-width, initial-scale=1"> -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet"
+    integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+
+  <title>EE4414 Project Demo- Performance Optimization</title>
+  <style>
+    html {
+      line-height: 1.5;
+      font-family: Georgia, serif;
+      font-size: 20px;
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+
+    body {
+      margin: 0 auto;
+      /* margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      word-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal; */
+    }
+
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 1em;
+      }
+    }
+
+    @media print {
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+
+      p,
+      h2,
+      h3 {
+        orphans: 3;
+        widows: 3;
+      }
+
+      h2,
+      h3,
+      h4 {
+        page-break-after: avoid;
+      }
+    }
+
+    p {
+      margin: 1em 0;
+    }
+
+    a {
+      color: #1a1a1a;
+    }
+
+    a:visited {
+      color: #1a1a1a;
+    }
+
+    img {
+      max-width: 100%;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+      margin-top: 1.4em;
+    }
+
+    h5,
+    h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+
+    h6 {
+      font-weight: normal;
+    }
+
+    ol,
+    ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+
+    li>ol,
+    li>ul {
+      margin-top: 0;
+    }
+
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+
+    code {
+      font-family: Menlo, Monaco, 'Lucida Console', Consolas, monospace;
+      font-size: 85%;
+      margin: 0;
+    }
+
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+
+    pre code {
+      padding: 0;
+      overflow: visible;
+    }
+
+    .sourceCode {
+      background-color: transparent;
+      overflow: visible;
+    }
+
+    hr {
+      background-color: #1a1a1a;
+      border: none;
+      height: 1px;
+      margin: 1em 0;
+    }
+
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+
+    table caption {
+      margin-bottom: 0.75em;
+    }
+
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+
+    #TOC li {
+      list-style: none;
+    }
+
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+
+    code {
+      white-space: pre-wrap;
+    }
+
+    span.smallcaps {
+      font-variant: small-caps;
+    }
+
+    span.underline {
+      text-decoration: underline;
+    }
+
+    div.column {
+      display: inline-block;
+      vertical-align: top;
+      width: 50%;
+    }
+
+    div.hanging-indent {
+      margin-left: 1.5em;
+      text-indent: -1.5em;
+    }
+
+    ul.task-list {
+      list-style: none;
+    }
+
+    pre>code.sourceCode {
+      white-space: pre;
+      position: relative;
+    }
+
+    pre>code.sourceCode>span {
+      display: inline-block;
+      line-height: 1.25;
+    }
+
+    pre>code.sourceCode>span:empty {
+      height: 1.2em;
+    }
+
+    .sourceCode {
+      overflow: visible;
+    }
+
+    code.sourceCode>span {
+      color: inherit;
+      text-decoration: inherit;
+    }
+
+    div.sourceCode {
+      margin: 1em 0;
+    }
+
+    pre.sourceCode {
+      margin: 0;
+    }
+
+    @media screen {
+      div.sourceCode {
+        overflow: auto;
+      }
+    }
+
+    @media print {
+      pre>code.sourceCode {
+        white-space: pre-wrap;
+      }
+
+      pre>code.sourceCode>span {
+        text-indent: -5em;
+        padding-left: 5em;
+      }
+    }
+
+    pre.numberSource code {
+      counter-reset: source-line 0;
+    }
+
+    pre.numberSource code>span {
+      position: relative;
+      left: -4em;
+      counter-increment: source-line;
+    }
+
+    pre.numberSource code>span>a:first-child::before {
+      content: counter(source-line);
+      position: relative;
+      left: -1em;
+      text-align: right;
+      vertical-align: baseline;
+      border: none;
+      display: inline-block;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      -khtml-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+      padding: 0 4px;
+      width: 4em;
+      color: #aaaaaa;
+    }
+
+    pre.numberSource {
+      margin-left: 3em;
+      border-left: 1px solid #aaaaaa;
+      padding-left: 4px;
+    }
+
+    div.sourceCode {}
+
+    @media screen {
+      pre>code.sourceCode>span>a:first-child::before {
+        text-decoration: underline;
+      }
+    }
+
+    code span.al {
+      color: #ff0000;
+      font-weight: bold;
+    }
+
+    /* Alert */
+    code span.an {
+      color: #60a0b0;
+      font-weight: bold;
+      font-style: italic;
+    }
+
+    /* Annotation */
+    code span.at {
+      color: #7d9029;
+    }
+
+    /* Attribute */
+    code span.bn {
+      color: #40a070;
+    }
+
+    /* BaseN */
+    code span.bu {}
+
+    /* BuiltIn */
+    code span.cf {
+      color: #007020;
+      font-weight: bold;
+    }
+
+    /* ControlFlow */
+    code span.ch {
+      color: #4070a0;
+    }
+
+    /* Char */
+    code span.cn {
+      color: #880000;
+    }
+
+    /* Constant */
+    code span.co {
+      color: #60a0b0;
+      font-style: italic;
+    }
+
+    /* Comment */
+    code span.cv {
+      color: #60a0b0;
+      font-weight: bold;
+      font-style: italic;
+    }
+
+    /* CommentVar */
+    code span.do {
+      color: #ba2121;
+      font-style: italic;
+    }
+
+    /* Documentation */
+    code span.dt {
+      color: #902000;
+    }
+
+    /* DataType */
+    code span.dv {
+      color: #40a070;
+    }
+
+    /* DecVal */
+    code span.er {
+      color: #ff0000;
+      font-weight: bold;
+    }
+
+    /* Error */
+    code span.ex {}
+
+    /* Extension */
+    code span.fl {
+      color: #40a070;
+    }
+
+    /* Float */
+    code span.fu {
+      color: #06287e;
+    }
+
+    /* Function */
+    code span.im {}
+
+    /* Import */
+    code span.in {
+      color: #60a0b0;
+      font-weight: bold;
+      font-style: italic;
+    }
+
+    /* Information */
+    code span.kw {
+      color: #007020;
+      font-weight: bold;
+    }
+
+    /* Keyword */
+    code span.op {
+      color: #666666;
+    }
+
+    /* Operator */
+    code span.ot {
+      color: #007020;
+    }
+
+    /* Other */
+    code span.pp {
+      color: #bc7a00;
+    }
+
+    /* Preprocessor */
+    code span.sc {
+      color: #4070a0;
+    }
+
+    /* SpecialChar */
+    code span.ss {
+      color: #bb6688;
+    }
+
+    /* SpecialString */
+    code span.st {
+      color: #4070a0;
+    }
+
+    /* String */
+    code span.va {
+      color: #19177c;
+    }
+
+    /* Variable */
+    code span.vs {
+      color: #4070a0;
+    }
+
+    /* VerbatimString */
+    code span.wa {
+      color: #60a0b0;
+      font-weight: bold;
+      font-style: italic;
+    }
+
+    /* Warning */
+    .display.math {
+      display: block;
+      text-align: center;
+      margin: 0.5rem auto;
+    }
+  </style>
+  <!--[if lt IE 9]>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv-printshiv.min.js"></script>
+  <![endif]-->
+</head>
+
+<body>
+  <!-- As a heading -->
+  <nav class="navbar navbar-expand-lg navbar-light bg-light">
+		<div class="container-fluid">
+			<a class="navbar-brand" href="#">Sg Food Classifier</a>
+			<button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+				data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false"
+				aria-label="Toggle navigation">
+				<span class="navbar-toggler-icon"></span>
+			</button>
+			<div class="collapse navbar-collapse" id="navbarSupportedContent">
+				<ul class="navbar-nav me-auto mb-2 mb-lg-0">
+					<li class="nav-item">
+						<a class="nav-link active" aria-current="page" href="/">Home</a>
+					</li>
+					<li class="nav-item">
+						<a class="nav-link" href="/effnet">EffNet Experiment</a>
+					</li>
+					<li class="nav-item">
+						<a class="nav-link" href="/resnet">ResNet Experiment</a>
+					</li>
+					<li class="nav-item">
+						<a class="nav-link" href="/stacking">Model Stacking Experiment</a>
+					</li>
+					<li class="nav-item">
+						<a class="nav-link" href="/onnx">Performance Optimization using ONNX</a>
+					</li>
+					
+				</ul>
+			</div>
+		</div>
+	</nav>
+  <br />
+  <section id="torch-to-onnx-conversion-for-inference-optimization" class="cell markdown">
+    <h1>Torch to ONNX Conversion for Inference Optimization</h1>
+  </section>
+  <div class="cell markdown">
+    <p>ONNX Runtime is a performance-focused engine for ONNX models, which inferences efficiently across multiple
+      platforms and hardware (Windows, Linux, and Mac and on both CPUs and GPUs). ONNX Runtime has proved to
+      considerably increase performance over multiple models.</p>
+  </div>
+  <section id="standard-imports" class="cell markdown">
+    <h2>Standard Imports</h2>
+  </section>
+  <div class="cell code" data-execution_count="1">
+    <div class="sourceCode" id="cb1">
+      <pre
+        class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Some standard imports</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> io</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> torch <span class="im">import</span> nn</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> torch.utils.model_zoo <span class="im">as</span> model_zoo</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> torch.onnx</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> torch</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> torch.nn <span class="im">as</span> nn</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> torch.optim <span class="im">as</span> optim</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> torch.optim <span class="im">import</span> lr_scheduler</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> torchvision</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> torchvision <span class="im">import</span> models, transforms</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> torchvision.datasets.folder <span class="im">import</span> make_dataset</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> PIL <span class="im">import</span> Image</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> time</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> copy</span></code></pre>
+    </div>
+  </div>
+  <div class="cell code" data-execution_count="2">
+    <div class="sourceCode" id="cb2">
+      <pre
+        class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> onnxruntime</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> onnx</span></code></pre>
+    </div>
+  </div>
+  <section id="data-and-model-preparation" class="cell markdown">
+    <h2>Data and Model Preparation</h2>
+  </section>
+  <div class="cell code" data-execution_count="3">
+    <div class="sourceCode" id="cb3">
+      <pre
+        class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>WEIGHT_PATH <span class="op">=</span> <span class="st">&#39;./custom_model.pth&#39;</span></span></code></pre>
+    </div>
+  </div>
+  <div class="cell code" data-execution_count="4">
+    <div class="sourceCode" id="cb4">
+      <pre
+        class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Initialize model with the pretrained weights</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> models.vgg16(pretrained<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> param <span class="kw">in</span> model.parameters():</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    param.requires_grad <span class="op">=</span> <span class="va">False</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>num_ftrs <span class="op">=</span> model.classifier[<span class="op">-</span><span class="dv">1</span>].in_features</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>model.classifier[<span class="op">-</span><span class="dv">1</span>] <span class="op">=</span> nn.Linear(num_ftrs, <span class="dv">5</span>)</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Load model weights</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>model.load_state_dict(torch.load(WEIGHT_PATH,map_location<span class="op">=</span>torch.device(<span class="st">&#39;cpu&#39;</span>)))</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> torch.cuda.is_available():</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>    model.cuda()</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>model.<span class="bu">eval</span>()</span></code></pre>
+    </div>
+    <div class="output execute_result" data-execution_count="4">
+      <pre><code>VGG(
+  (features): Sequential(
+    (0): Conv2d(3, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (1): ReLU(inplace=True)
+    (2): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (3): ReLU(inplace=True)
+    (4): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+    (5): Conv2d(64, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (6): ReLU(inplace=True)
+    (7): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (8): ReLU(inplace=True)
+    (9): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+    (10): Conv2d(128, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (11): ReLU(inplace=True)
+    (12): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (13): ReLU(inplace=True)
+    (14): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (15): ReLU(inplace=True)
+    (16): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+    (17): Conv2d(256, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (18): ReLU(inplace=True)
+    (19): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (20): ReLU(inplace=True)
+    (21): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (22): ReLU(inplace=True)
+    (23): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+    (24): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (25): ReLU(inplace=True)
+    (26): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (27): ReLU(inplace=True)
+    (28): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (29): ReLU(inplace=True)
+    (30): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  )
+  (avgpool): AdaptiveAvgPool2d(output_size=(7, 7))
+  (classifier): Sequential(
+    (0): Linear(in_features=25088, out_features=4096, bias=True)
+    (1): ReLU(inplace=True)
+    (2): Dropout(p=0.5, inplace=False)
+    (3): Linear(in_features=4096, out_features=4096, bias=True)
+    (4): ReLU(inplace=True)
+    (5): Dropout(p=0.5, inplace=False)
+    (6): Linear(in_features=4096, out_features=5, bias=True)
+  )
+)</code></pre>
+    </div>
+  </div>
+  <div class="cell code" data-execution_count="5">
+    <div class="sourceCode" id="cb6">
+      <pre
+        class="sourceCode python"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the dataloader for testing.</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>test_batch_size <span class="op">=</span> <span class="dv">64</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="co"># test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=test_batch_size, shuffle=True, num_workers=4,pin_memory=True)</span></span></code></pre>
+    </div>
+  </div>
+  <div class="cell code" data-execution_count="6">
+    <div class="sourceCode" id="cb7">
+      <pre
+        class="sourceCode python"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Input to the model</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> torch.randn(test_batch_size, <span class="dv">3</span>, <span class="dv">224</span>, <span class="dv">224</span>, requires_grad<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>torch_out <span class="op">=</span> model(x)</span></code></pre>
+    </div>
+  </div>
+  <section id="onnx-export-testing" class="cell markdown">
+    <h1>ONNX Export testing</h1>
+  </section>
+  <div class="cell code">
+    <div class="sourceCode" id="cb8">
+      <pre class="sourceCode python"><code class="sourceCode python"></code></pre>
+    </div>
+  </div>
+  <div class="cell code" data-execution_count="12">
+    <div class="sourceCode" id="cb9">
+      <pre
+        class="sourceCode python"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> onnx</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>onnx_model <span class="op">=</span> onnx.load(<span class="st">&quot;./onnx_converted.onnx&quot;</span>)</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>onnx.checker.check_model(onnx_model)</span></code></pre>
+    </div>
+  </div>
+  <div class="cell code" data-execution_count="13">
+    <div class="sourceCode" id="cb10">
+      <pre
+        class="sourceCode python"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> onnxruntime</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>ort_session <span class="op">=</span> onnxruntime.InferenceSession(<span class="st">&quot;./onnx_converted.onnx&quot;</span>)</span></code></pre>
+    </div>
+  </div>
+  <div class="cell code" data-execution_count="16">
+    <div class="sourceCode" id="cb11">
+      <pre
+        class="sourceCode python"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the dataset class</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> sg_food_dataset(torch.utils.data.dataset.Dataset):</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, root, class_id, transform<span class="op">=</span><span class="va">None</span>):</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.class_id <span class="op">=</span> class_id</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.root <span class="op">=</span> root</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>        all_classes <span class="op">=</span> <span class="bu">sorted</span>(entry.name <span class="cf">for</span> entry <span class="kw">in</span> os.scandir(root) <span class="cf">if</span> entry.is_dir())</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="kw">not</span> all_classes:</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>            <span class="cf">raise</span> <span class="pp">FileNotFoundError</span>(<span class="ss">f&quot;Couldn&#39;t find any class folder in </span><span class="sc">{</span>directory<span class="sc">}</span><span class="ss">.&quot;</span>)</span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.classes <span class="op">=</span> [all_classes[x] <span class="cf">for</span> x <span class="kw">in</span> class_id]</span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.class_to_idx <span class="op">=</span> {cls_name: i <span class="cf">for</span> i, cls_name <span class="kw">in</span> <span class="bu">enumerate</span>(<span class="va">self</span>.classes)}</span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.samples <span class="op">=</span> make_dataset(<span class="va">self</span>.root, <span class="va">self</span>.class_to_idx, extensions<span class="op">=</span>(<span class="st">&#39;jpg&#39;</span>))</span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.transform <span class="op">=</span> transform</span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__len__</span>(<span class="va">self</span>):</span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="bu">len</span>(<span class="va">self</span>.samples)</span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__getitem__</span>(<span class="va">self</span>, idx):</span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a>        path, target <span class="op">=</span> <span class="va">self</span>.samples[idx]</span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a>        <span class="cf">with</span> <span class="bu">open</span>(path, <span class="st">&quot;rb&quot;</span>) <span class="im">as</span> f:</span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a>            sample <span class="op">=</span> Image.<span class="bu">open</span>(f).convert(<span class="st">&#39;RGB&#39;</span>)</span>
+<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="va">self</span>.transform <span class="kw">is</span> <span class="kw">not</span> <span class="va">None</span>:</span>
+<span id="cb11-23"><a href="#cb11-23" aria-hidden="true" tabindex="-1"></a>            sample <span class="op">=</span> <span class="va">self</span>.transform(sample)</span>
+<span id="cb11-24"><a href="#cb11-24" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> sample, target</span></code></pre>
+    </div>
+  </div>
+  <div class="cell code" data-execution_count="17">
+    <div class="sourceCode" id="cb12">
+      <pre
+        class="sourceCode python"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> to_numpy(tensor):</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> tensor.detach().cpu().numpy() <span class="cf">if</span> tensor.requires_grad <span class="cf">else</span> tensor.cpu().numpy()</span></code></pre>
+    </div>
+  </div>
+  <div class="cell code" data-execution_count="18">
+    <div class="sourceCode" id="cb13">
+      <pre
+        class="sourceCode python"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Data augmentation and normalization for training</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>data_transforms <span class="op">=</span> {</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;train&#39;</span>: transforms.Compose([</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Define data preparation operations for training set here.</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Tips: Use torchvision.transforms</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>        <span class="co">#       https://pytorch.org/vision/stable/transforms.html</span></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>        <span class="co">#       Normally this should at least contain resizing (Resize) and data format converting (ToTensor).</span></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>        transforms.RandomResizedCrop(<span class="dv">224</span>),</span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>        transforms.RandomHorizontalFlip(),</span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>        transforms.ToTensor(),</span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>        transforms.Normalize([<span class="fl">0.485</span>, <span class="fl">0.456</span>, <span class="fl">0.406</span>], [<span class="fl">0.229</span>, <span class="fl">0.224</span>, <span class="fl">0.225</span>]) <span class="co"># ImageNet prior</span></span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>    ]),</span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;val&#39;</span>: transforms.Compose([</span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Define data preparation operations for testing/validation set here.</span></span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a>        transforms.Resize(<span class="dv">256</span>),</span>
+<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a>        transforms.CenterCrop(<span class="dv">224</span>),</span>
+<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a>        transforms.ToTensor(),</span>
+<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a>        transforms.Normalize([<span class="fl">0.485</span>, <span class="fl">0.456</span>, <span class="fl">0.406</span>], [<span class="fl">0.229</span>, <span class="fl">0.224</span>, <span class="fl">0.225</span>]) <span class="co"># ImageNet prior</span></span>
+<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a>    ]),</span>
+<span id="cb13-21"><a href="#cb13-21" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb13-22"><a href="#cb13-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-23"><a href="#cb13-23" aria-hidden="true" tabindex="-1"></a>data_dir <span class="op">=</span> os.path.join(<span class="st">&#39;./&#39;</span>, <span class="st">&#39;sg_food&#39;</span>)</span>
+<span id="cb13-24"><a href="#cb13-24" aria-hidden="true" tabindex="-1"></a>subfolder <span class="op">=</span> {<span class="st">&#39;train&#39;</span>: <span class="st">&#39;train&#39;</span>, <span class="st">&#39;val&#39;</span>: <span class="st">&#39;val&#39;</span>}</span>
+<span id="cb13-25"><a href="#cb13-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-26"><a href="#cb13-26" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the dataset</span></span>
+<span id="cb13-27"><a href="#cb13-27" aria-hidden="true" tabindex="-1"></a>selected_classes <span class="op">=</span> [<span class="dv">3</span>,<span class="dv">5</span>,<span class="dv">7</span>,<span class="dv">8</span>,<span class="dv">9</span>]</span>
+<span id="cb13-28"><a href="#cb13-28" aria-hidden="true" tabindex="-1"></a>n_classes <span class="op">=</span> <span class="bu">len</span>(selected_classes)</span>
+<span id="cb13-29"><a href="#cb13-29" aria-hidden="true" tabindex="-1"></a>image_datasets <span class="op">=</span> {x: sg_food_dataset(root<span class="op">=</span>os.path.join(data_dir, subfolder[x]),</span>
+<span id="cb13-30"><a href="#cb13-30" aria-hidden="true" tabindex="-1"></a>                                     class_id<span class="op">=</span>selected_classes,</span>
+<span id="cb13-31"><a href="#cb13-31" aria-hidden="true" tabindex="-1"></a>                                     transform<span class="op">=</span>data_transforms[x]) </span>
+<span id="cb13-32"><a href="#cb13-32" aria-hidden="true" tabindex="-1"></a>                  <span class="cf">for</span> x <span class="kw">in</span> [<span class="st">&#39;train&#39;</span>, <span class="st">&#39;val&#39;</span>]}</span>
+<span id="cb13-33"><a href="#cb13-33" aria-hidden="true" tabindex="-1"></a>class_names <span class="op">=</span> image_datasets[<span class="st">&#39;train&#39;</span>].classes</span>
+<span id="cb13-34"><a href="#cb13-34" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&#39;selected classes:</span><span class="ch">\n</span><span class="st">    id: </span><span class="sc">{}</span><span class="ch">\n</span><span class="st">    name: </span><span class="sc">{}</span><span class="st">&#39;</span>.<span class="bu">format</span>(selected_classes, class_names))</span>
+<span id="cb13-35"><a href="#cb13-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-36"><a href="#cb13-36" aria-hidden="true" tabindex="-1"></a>dataset_sizes <span class="op">=</span> {x: <span class="bu">len</span>(image_datasets[x]) <span class="cf">for</span> x <span class="kw">in</span> [<span class="st">&#39;train&#39;</span>, <span class="st">&#39;val&#39;</span>]}</span>
+<span id="cb13-37"><a href="#cb13-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-38"><a href="#cb13-38" aria-hidden="true" tabindex="-1"></a>device <span class="op">=</span> torch.device(<span class="st">&quot;cuda:0&quot;</span> <span class="cf">if</span> torch.cuda.is_available() <span class="cf">else</span> <span class="st">&quot;cpu&quot;</span>)</span></code></pre>
+    </div>
+    <div class="output stream stdout">
+      <pre><code>selected classes:
+    id: [3, 5, 7, 8, 9]
+    name: [&#39;Hokkien Prawn Mee&#39;, &#39;Laksa&#39;, &#39;Oyster Omelette&#39;, &#39;Roast Meat Rice&#39;, &#39;Roti Prata&#39;]
+</code></pre>
+    </div>
+  </div>
+  <div class="cell code" data-execution_count="19">
+    <div class="sourceCode" id="cb15">
+      <pre
+        class="sourceCode python"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>test_dir <span class="op">=</span> <span class="st">&#39;./sg_food/test&#39;</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the test set.</span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>test_dataset <span class="op">=</span> sg_food_dataset(root<span class="op">=</span>test_dir, class_id<span class="op">=</span>selected_classes, transform<span class="op">=</span>data_transforms[<span class="st">&#39;val&#39;</span>])</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>test_sizes <span class="op">=</span> <span class="bu">len</span>(test_dataset)</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the dataloader for testing.</span></span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>test_batch_size <span class="op">=</span> <span class="dv">64</span></span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>test_loader <span class="op">=</span> torch.utils.data.DataLoader(test_dataset, batch_size<span class="op">=</span>test_batch_size, shuffle<span class="op">=</span><span class="va">True</span>, num_workers<span class="op">=</span><span class="dv">0</span>)</span></code></pre>
+    </div>
+  </div>
+  <div class="cell code" data-execution_count="12" data-scrolled="true">
+    <div class="sourceCode" id="cb16">
+      <pre
+        class="sourceCode python"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>test_acc <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&#39;Evaluation&#39;</span>)</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&#39;-&#39;</span> <span class="op">*</span> <span class="dv">10</span>)</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>y_true <span class="op">=</span> []</span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>y_pred <span class="op">=</span> []</span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>wrong_detections <span class="op">=</span> []</span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>correct_detections <span class="op">=</span> []</span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>time_total<span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> torch.no_grad():</span>
+<span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Iterate over the testing dataset.</span></span>
+<span id="cb16-16"><a href="#cb16-16" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> (inputs, labels) <span class="kw">in</span> test_loader:</span>
+<span id="cb16-17"><a href="#cb16-17" aria-hidden="true" tabindex="-1"></a>        inputs <span class="op">=</span> inputs.to(device)</span>
+<span id="cb16-18"><a href="#cb16-18" aria-hidden="true" tabindex="-1"></a>        ort_inputs <span class="op">=</span> {ort_session.get_inputs()[<span class="dv">0</span>].name: to_numpy(inputs)}</span>
+<span id="cb16-19"><a href="#cb16-19" aria-hidden="true" tabindex="-1"></a>        time_start <span class="op">=</span> time.time()</span>
+<span id="cb16-20"><a href="#cb16-20" aria-hidden="true" tabindex="-1"></a>        ort_outs <span class="op">=</span> ort_session.run(<span class="va">None</span>, ort_inputs)</span>
+<span id="cb16-21"><a href="#cb16-21" aria-hidden="true" tabindex="-1"></a>        time_total <span class="op">+=</span> time.time() <span class="op">-</span> time_start</span>
+<span id="cb16-22"><a href="#cb16-22" aria-hidden="true" tabindex="-1"></a><span class="co">#         print(type(ort_outs))</span></span>
+<span id="cb16-23"><a href="#cb16-23" aria-hidden="true" tabindex="-1"></a><span class="co">#         print(len(ort_outs[0]))</span></span>
+<span id="cb16-24"><a href="#cb16-24" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb16-25"><a href="#cb16-25" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Predict on the test set</span></span>
+<span id="cb16-26"><a href="#cb16-26" aria-hidden="true" tabindex="-1"></a>        <span class="co"># outputs = model(inputs)</span></span>
+<span id="cb16-27"><a href="#cb16-27" aria-hidden="true" tabindex="-1"></a>        output_tensors <span class="op">=</span> torch.FloatTensor(ort_outs[<span class="dv">0</span>])</span>
+<span id="cb16-28"><a href="#cb16-28" aria-hidden="true" tabindex="-1"></a>        _, preds <span class="op">=</span> torch.<span class="bu">max</span>(output_tensors, <span class="dv">1</span>)</span>
+<span id="cb16-29"><a href="#cb16-29" aria-hidden="true" tabindex="-1"></a><span class="co">#         print(preds)</span></span>
+<span id="cb16-30"><a href="#cb16-30" aria-hidden="true" tabindex="-1"></a>        <span class="co"># preds = ort_outs</span></span>
+<span id="cb16-31"><a href="#cb16-31" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb16-32"><a href="#cb16-32" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Confusion Matrix</span></span>
+<span id="cb16-33"><a href="#cb16-33" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb16-34"><a href="#cb16-34" aria-hidden="true" tabindex="-1"></a>        y_true.extend(preds.numpy())</span>
+<span id="cb16-35"><a href="#cb16-35" aria-hidden="true" tabindex="-1"></a>        y_pred.extend(labels.data.numpy())</span>
+<span id="cb16-36"><a href="#cb16-36" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb16-37"><a href="#cb16-37" aria-hidden="true" tabindex="-1"></a>        test_acc <span class="op">+=</span> torch.<span class="bu">sum</span>(preds <span class="op">==</span> labels.data)</span>
+<span id="cb16-38"><a href="#cb16-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-39"><a href="#cb16-39" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&#39;Eval time...&#39;</span>)</span>
+<span id="cb16-40"><a href="#cb16-40" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(time_total)</span>
+<span id="cb16-41"><a href="#cb16-41" aria-hidden="true" tabindex="-1"></a><span class="co"># Compute the testing accuracy</span></span>
+<span id="cb16-42"><a href="#cb16-42" aria-hidden="true" tabindex="-1"></a>test_acc <span class="op">=</span> test_acc.double() <span class="op">/</span> test_sizes</span>
+<span id="cb16-43"><a href="#cb16-43" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&#39;Testing Acc: </span><span class="sc">{:.4f}</span><span class="st">&#39;</span>.<span class="bu">format</span>(test_acc))</span></code></pre>
+    </div>
+    <div class="output stream stdout">
+      <pre><code>Evaluation
+----------
+Eval time...
+125.17501211166382
+Testing Acc: 0.8318
+</code></pre>
+    </div>
+  </div>
+  <div class="cell code">
+    <div class="sourceCode" id="cb18">
+      <pre class="sourceCode python"><code class="sourceCode python"></code></pre>
+    </div>
+  </div>
+  <div class="cell code">
+    <div class="sourceCode" id="cb19">
+      <pre class="sourceCode python"><code class="sourceCode python"></code></pre>
+    </div>
+  </div>
+  <section id="torch-based-inference" class="cell markdown">
+    <h2>Torch based inference</h2>
+  </section>
+  <div class="cell code" data-execution_count="12">
+    <div class="sourceCode" id="cb20">
+      <pre
+        class="sourceCode python"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>model.<span class="bu">eval</span>()</span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>test_acc <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&#39;Evaluation&#39;</span>)</span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&#39;-&#39;</span> <span class="op">*</span> <span class="dv">10</span>)</span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a>y_true <span class="op">=</span> []</span>
+<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a>y_pred <span class="op">=</span> []</span>
+<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-13"><a href="#cb20-13" aria-hidden="true" tabindex="-1"></a>wrong_detections <span class="op">=</span> []</span>
+<span id="cb20-14"><a href="#cb20-14" aria-hidden="true" tabindex="-1"></a>correct_detections <span class="op">=</span> []</span>
+<span id="cb20-15"><a href="#cb20-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-16"><a href="#cb20-16" aria-hidden="true" tabindex="-1"></a>time_now<span class="op">=</span> time.time()</span>
+<span id="cb20-17"><a href="#cb20-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-18"><a href="#cb20-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-19"><a href="#cb20-19" aria-hidden="true" tabindex="-1"></a>time_total<span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb20-20"><a href="#cb20-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-21"><a href="#cb20-21" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> torch.no_grad():</span>
+<span id="cb20-22"><a href="#cb20-22" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Iterate over the testing dataset.</span></span>
+<span id="cb20-23"><a href="#cb20-23" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> (inputs, labels) <span class="kw">in</span> test_loader:</span>
+<span id="cb20-24"><a href="#cb20-24" aria-hidden="true" tabindex="-1"></a>        inputs <span class="op">=</span> inputs.to(device)</span>
+<span id="cb20-25"><a href="#cb20-25" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Predict on the test set</span></span>
+<span id="cb20-26"><a href="#cb20-26" aria-hidden="true" tabindex="-1"></a>        time_start <span class="op">=</span> time.time()</span>
+<span id="cb20-27"><a href="#cb20-27" aria-hidden="true" tabindex="-1"></a>        outputs <span class="op">=</span> model(inputs)</span>
+<span id="cb20-28"><a href="#cb20-28" aria-hidden="true" tabindex="-1"></a>        time_total <span class="op">+=</span> time.time() <span class="op">-</span> time_start</span>
+<span id="cb20-29"><a href="#cb20-29" aria-hidden="true" tabindex="-1"></a>        _, preds <span class="op">=</span> torch.<span class="bu">max</span>(outputs, <span class="dv">1</span>)</span>
+<span id="cb20-30"><a href="#cb20-30" aria-hidden="true" tabindex="-1"></a>        preds <span class="op">=</span> preds.cpu()</span>
+<span id="cb20-31"><a href="#cb20-31" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb20-32"><a href="#cb20-32" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Confusion Matrix</span></span>
+<span id="cb20-33"><a href="#cb20-33" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb20-34"><a href="#cb20-34" aria-hidden="true" tabindex="-1"></a>        y_true.extend(preds.numpy())</span>
+<span id="cb20-35"><a href="#cb20-35" aria-hidden="true" tabindex="-1"></a>        y_pred.extend(labels.data.numpy())</span>
+<span id="cb20-36"><a href="#cb20-36" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb20-37"><a href="#cb20-37" aria-hidden="true" tabindex="-1"></a>        test_acc <span class="op">+=</span> torch.<span class="bu">sum</span>(preds <span class="op">==</span> labels.data)</span>
+<span id="cb20-38"><a href="#cb20-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-39"><a href="#cb20-39" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&#39;Eval time...&#39;</span>)</span>
+<span id="cb20-40"><a href="#cb20-40" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(time.time()<span class="op">-</span>time_now)</span>
+<span id="cb20-41"><a href="#cb20-41" aria-hidden="true" tabindex="-1"></a><span class="co"># Compute the testing accuracy</span></span>
+<span id="cb20-42"><a href="#cb20-42" aria-hidden="true" tabindex="-1"></a>test_acc <span class="op">=</span> test_acc.double() <span class="op">/</span> test_sizes</span>
+<span id="cb20-43"><a href="#cb20-43" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&#39;Testing Acc: </span><span class="sc">{:.4f}</span><span class="st">&#39;</span>.<span class="bu">format</span>(test_acc))</span></code></pre>
+    </div>
+    <div class="output stream stdout">
+      <pre><code>Evaluation
+----------
+Eval time...
+208.15612721443176
+Testing Acc: 0.8318
+</code></pre>
+    </div>
+  </div>
+  <section id="benchmarking-runtimes" class="cell markdown">
+    <h1>Benchmarking Runtimes</h1>
+  </section>
+  <div class="cell code" data-execution_count="6">
+    <div class="sourceCode" id="cb22">
+      <pre
+        class="sourceCode python"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> timeit <span class="im">import</span> timeit</span></code></pre>
+    </div>
+  </div>
+  <div class="cell code" data-execution_count="7">
+    <div class="sourceCode" id="cb23">
+      <pre
+        class="sourceCode python"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span></code></pre>
+    </div>
+  </div>
+  <div class="cell code" data-execution_count="8">
+    <div class="sourceCode" id="cb24">
+      <pre
+        class="sourceCode python"><code class="sourceCode python"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="co"># x = torch.randn(test_batch_size, 3, 224, 224, requires_grad=True)</span></span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> np.random.rand(test_batch_size,<span class="dv">3</span>,<span class="dv">224</span>,<span class="dv">224</span>).astype(np.float32)</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>torch_data <span class="op">=</span> torch.from_numpy(data)</span></code></pre>
+    </div>
+  </div>
+  <div class="cell code" data-execution_count="23">
+    <div class="sourceCode" id="cb25">
+      <pre
+        class="sourceCode python"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> torch_inf():</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>    model(torch_data)</span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> onnx_inf():</span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>    ort_inputs <span class="op">=</span> {ort_session.get_inputs()[<span class="dv">0</span>].name: data}</span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a>    ort_outs <span class="op">=</span> ort_session.run(<span class="va">None</span>, ort_inputs)</span></code></pre>
+    </div>
+  </div>
+  <div class="cell code" data-execution_count="28">
+    <div class="sourceCode" id="cb26">
+      <pre
+        class="sourceCode python"><code class="sourceCode python"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>n <span class="op">=</span> <span class="dv">20</span></span></code></pre>
+    </div>
+  </div>
+  <div class="cell code">
+    <div class="sourceCode" id="cb27">
+      <pre
+        class="sourceCode python"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>torch_t <span class="op">=</span> timeit(<span class="kw">lambda</span> : torch_inf(), number<span class="op">=</span>n)<span class="op">/</span><span class="dv">20</span></span></code></pre>
+    </div>
+  </div>
+  <div class="cell code" data-execution_count="22">
+    <div class="sourceCode" id="cb28">
+      <pre
+        class="sourceCode python"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>torch_t</span></code></pre>
+    </div>
+    <div class="output execute_result" data-execution_count="22">
+      <pre><code>12.876783071699998</code></pre>
+    </div>
+  </div>
+  <div class="cell code" data-execution_count="24">
+    <div class="sourceCode" id="cb30">
+      <pre
+        class="sourceCode python"><code class="sourceCode python"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>onnx_t <span class="op">=</span> timeit(<span class="kw">lambda</span> : onnx_inf(), number<span class="op">=</span>n)<span class="op">/</span><span class="dv">20</span></span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;PyTorch </span><span class="sc">{</span>torch_t<span class="sc">}</span><span class="ss"> VS ONNX </span><span class="sc">{</span>onnx_t<span class="sc">}</span><span class="ss">&quot;</span>)</span></code></pre>
+    </div>
+    <div class="output stream stdout">
+      <pre><code>PyTorch 12.876783071699998 VS ONNX 7.9055955048500035
+</code></pre>
+    </div>
+  </div>
+  <div class="cell code" data-execution_count="25">
+    <div class="sourceCode" id="cb32">
+      <pre class="sourceCode python"><code class="sourceCode python"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>plt.figure()</span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a>frameworks <span class="op">=</span> [<span class="st">&quot;PyTorch&quot;</span>, <span class="st">&quot;ONNX&quot;</span>]</span>
+<span id="cb32-6"><a href="#cb32-6" aria-hidden="true" tabindex="-1"></a>times <span class="op">=</span> [torch_t, onnx_t]</span>
+<span id="cb32-7"><a href="#cb32-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-8"><a href="#cb32-8" aria-hidden="true" tabindex="-1"></a>plt.bar(frameworks[<span class="dv">0</span>], times[<span class="dv">0</span>])</span>
+<span id="cb32-9"><a href="#cb32-9" aria-hidden="true" tabindex="-1"></a>plt.bar(frameworks[<span class="dv">1</span>], times[<span class="dv">1</span>])</span>
+<span id="cb32-10"><a href="#cb32-10" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre>
+    </div>
+    <div class="output display_data">
+      <p><img src="vertopal_2be242d8dd074c57bd7afdc3e986d36c/f8289842476630e62efada8629d3cc8c14286d63.png" /></p>
+    </div>
+  </div>
+  <div class="cell code" data-execution_count="26">
+    <div class="sourceCode" id="cb33">
+      <pre
+        class="sourceCode python"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>(torch_t<span class="op">-</span>onnx_t)<span class="op">/</span>torch_t</span></code></pre>
+    </div>
+    <div class="output execute_result" data-execution_count="26">
+      <pre><code>0.3860581900906168</code></pre>
+    </div>
+  </div>
+  <div class="cell code" data-execution_count="27">
+    <div class="sourceCode" id="cb35">
+      <pre
+        class="sourceCode python"><code class="sourceCode python"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>(<span class="fl">208.156</span><span class="op">-</span><span class="fl">125.75</span>)<span class="op">/</span><span class="fl">208.156</span></span></code></pre>
+    </div>
+    <div class="output execute_result" data-execution_count="27">
+      <pre><code>0.39588577797421165</code></pre>
+    </div>
+  </div>
+  <section id="testing-deployment" class="cell markdown">
+    <h1>Testing Deployment</h1>
+  </section>
+  <div class="cell code" data-execution_count="3">
+    <div class="sourceCode" id="cb37">
+      <pre
+        class="sourceCode python"><code class="sourceCode python"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>onnx_model <span class="op">=</span> onnx.load(<span class="st">&quot;./deployment/onnx_deployment.onnx&quot;</span>)</span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>onnx.checker.check_model(onnx_model)</span>
+<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a>ort_session <span class="op">=</span> onnxruntime.InferenceSession(<span class="st">&quot;./deployment/onnx_deployment.onnx&quot;</span>)</span></code></pre>
+    </div>
+  </div>
+  <div class="cell code" data-execution_count="8">
+    <div class="sourceCode" id="cb38">
+      <pre
+        class="sourceCode python"><code class="sourceCode python"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> cv2</span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>img <span class="op">=</span> cv2.imread(<span class="st">&#39;./Roti Prata.jpg&#39;</span>,<span class="dv">0</span>)</span>
+<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a>dim <span class="op">=</span> (<span class="dv">224</span>,<span class="dv">224</span>)</span></code></pre>
+    </div>
+  </div>
+  <div class="cell code" data-execution_count="12">
+    <div class="sourceCode" id="cb39">
+      <pre
+        class="sourceCode python"><code class="sourceCode python"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="co"># resize image</span></span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a>resized_img <span class="op">=</span> cv2.resize(img, dim, interpolation <span class="op">=</span> cv2.INTER_AREA).astype(np.float32)</span></code></pre>
+    </div>
+  </div>
+  <div class="cell code" data-execution_count="13">
+    <div class="sourceCode" id="cb40">
+      <pre class="sourceCode python"><code class="sourceCode python"></code></pre>
+    </div>
+  </div>
+  <div class="cell code">
+    <div class="sourceCode" id="cb41">
+      <pre class="sourceCode python"><code class="sourceCode python"></code></pre>
+    </div>
+  </div>
+  <div class="cell code" data-execution_count="20">
+    <div class="sourceCode" id="cb42">
+      <pre
+        class="sourceCode python"><code class="sourceCode python"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a>inputs,labels <span class="op">=</span> test_dataset[<span class="dv">0</span>]</span></code></pre>
+    </div>
+  </div>
+  <div class="cell code" data-execution_count="26">
+    <div class="sourceCode" id="cb43">
+      <pre
+        class="sourceCode python"><code class="sourceCode python"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a>inputs <span class="op">=</span> to_numpy(inputs)</span></code></pre>
+    </div>
+  </div>
+  <div class="cell code" data-execution_count="28">
+    <div class="sourceCode" id="cb44">
+      <pre
+        class="sourceCode python"><code class="sourceCode python"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a>inputs[<span class="dv">0</span>]</span></code></pre>
+    </div>
+    <div class="output execute_result" data-execution_count="28">
+      <pre><code>array([[ 0.7590547 ,  0.74193   ,  0.7590547 , ..., -0.6622999 ,
+        -0.6109256 , -0.5424266 ],
+       [ 0.7590547 ,  0.7590547 ,  0.7761795 , ..., -0.57667613,
+        -0.4054286 , -0.33692956],
+       [ 0.7590547 ,  0.74193   ,  0.7590547 , ..., -0.30268008,
+        -0.14855729, -0.09718303],
+       ...,
+       [ 1.3070468 ,  0.9816765 ,  0.5878072 , ..., -0.04580877,
+        -0.6109256 , -0.79929787],
+       [ 0.9988013 ,  0.6563062 ,  0.33093593, ...,  0.2624369 ,
+        -0.45680285, -0.79929787],
+       [ 0.6563062 ,  0.57068247,  0.2966864 , ...,  0.63918144,
+        -0.16568205, -0.6280504 ]], dtype=float32)</code></pre>
+    </div>
+  </div>
+  <div class="cell code" data-execution_count="29">
+    <div class="sourceCode" id="cb46">
+      <pre
+        class="sourceCode python"><code class="sourceCode python"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a>resized_img</span></code></pre>
+    </div>
+    <div class="output execute_result" data-execution_count="29">
+      <pre><code>array([[164., 165., 166., ..., 255., 255., 255.],
+       [165., 164., 164., ..., 255., 255., 255.],
+       [165., 164., 164., ..., 255., 255., 255.],
+       ...,
+       [217., 216., 216., ..., 255., 255., 255.],
+       [218., 217., 217., ..., 255., 255., 255.],
+       [218., 218., 217., ..., 255., 255., 255.]], dtype=float32)</code></pre>
+    </div>
+  </div>
+  <div class="cell code" data-execution_count="34">
+    <div class="sourceCode" id="cb48">
+      <pre
+        class="sourceCode python"><code class="sourceCode python"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a><span class="co"># deploy_dataset = sg_food_dataset(root=&#39;./deploy_test&#39;, class_id=selected_classes, transform=data_transforms[&#39;val&#39;])</span></span>
+<span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a><span class="co"># deploy_batch_size = 1</span></span>
+<span id="cb48-3"><a href="#cb48-3" aria-hidden="true" tabindex="-1"></a><span class="co"># deploy_loader = torch.utils.data.DataLoader(deploy_dataset, batch_size=deploy_batch_size, shuffle=True, num_workers=0)</span></span></code></pre>
+    </div>
+  </div>
+  <div class="cell code" data-execution_count="35">
+    <div class="sourceCode" id="cb49">
+      <pre
+        class="sourceCode python"><code class="sourceCode python"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a>resized_img <span class="op">/=</span> <span class="fl">255.</span></span></code></pre>
+    </div>
+  </div>
+  <div class="cell code" data-execution_count="38">
+    <div class="sourceCode" id="cb50">
+      <pre
+        class="sourceCode python"><code class="sourceCode python"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a>resized_img</span></code></pre>
+    </div>
+    <div class="output execute_result" data-execution_count="38">
+      <pre><code>array([[0.6431373 , 0.64705884, 0.6509804 , ..., 1.        , 1.        ,
+        1.        ],
+       [0.64705884, 0.6431373 , 0.6431373 , ..., 1.        , 1.        ,
+        1.        ],
+       [0.64705884, 0.6431373 , 0.6431373 , ..., 1.        , 1.        ,
+        1.        ],
+       ...,
+       [0.8509804 , 0.84705883, 0.84705883, ..., 1.        , 1.        ,
+        1.        ],
+       [0.85490197, 0.8509804 , 0.8509804 , ..., 1.        , 1.        ,
+        1.        ],
+       [0.85490197, 0.85490197, 0.8509804 , ..., 1.        , 1.        ,
+        1.        ]], dtype=float32)</code></pre>
+    </div>
+  </div>
+  <div class="cell code" data-execution_count="36">
+    <div class="sourceCode" id="cb52">
+      <pre
+        class="sourceCode python"><code class="sourceCode python"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a>ort_inputs <span class="op">=</span> {ort_session.get_inputs()[<span class="dv">0</span>].name: resized_img}</span></code></pre>
+    </div>
+  </div>
+  <div class="cell code" data-execution_count="37">
+    <div class="sourceCode" id="cb53">
+      <pre
+        class="sourceCode python"><code class="sourceCode python"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a>ort_outs <span class="op">=</span> ort_session.run(<span class="va">None</span>, ort_inputs)</span></code></pre>
+    </div>
+    <div class="output error" data-ename="InvalidArgument"
+      data-evalue="[ONNXRuntimeError] : 2 : INVALID_ARGUMENT : Invalid rank for input: input Got: 2 Expected: 4 Please fix either the inputs or the model.">
+      <pre><code>---------------------------------------------------------------------------
+InvalidArgument                           Traceback (most recent call last)
+/tmp/ipykernel_7813/3449483130.py in &lt;module&gt;
+----&gt; 1 ort_outs = ort_session.run(None, ort_inputs)
+
+~/.local/lib/python3.8/site-packages/onnxruntime/capi/onnxruntime_inference_collection.py in run(self, output_names, input_feed, run_options)
+    190             output_names = [output.name for output in self._outputs_meta]
+    191         try:
+--&gt; 192             return self._sess.run(output_names, input_feed, run_options)
+    193         except C.EPFail as err:
+    194             if self._enable_fallback:
+
+InvalidArgument: [ONNXRuntimeError] : 2 : INVALID_ARGUMENT : Invalid rank for input: input Got: 2 Expected: 4 Please fix either the inputs or the model.
+</code></pre>
+    </div>
+  </div>
+  <div class="cell code" data-execution_count="53">
+    <div class="sourceCode" id="cb55">
+      <pre class="sourceCode python"><code class="sourceCode python"></code></pre>
+    </div>
+  </div>
+  <div class="cell code" data-execution_count="73">
+    <div class="sourceCode" id="cb56">
+      <pre
+        class="sourceCode python"><code class="sourceCode python"><span id="cb56-1"><a href="#cb56-1" aria-hidden="true" tabindex="-1"></a><span class="co"># img = cv2.imread(&#39;./sg_food/test/Hokkien Prawn Mee/Hokkien Prawn Mee(28).jpg&#39;,cv2.COLOR_BGR2RGB)</span></span>
+<span id="cb56-2"><a href="#cb56-2" aria-hidden="true" tabindex="-1"></a>f <span class="op">=</span> <span class="st">&#39;./sg_food/test/Hokkien Prawn Mee/Hokkien Prawn Mee(28).jpg&#39;</span></span>
+<span id="cb56-3"><a href="#cb56-3" aria-hidden="true" tabindex="-1"></a>img <span class="op">=</span> Image.<span class="bu">open</span>(f).convert(<span class="st">&#39;RGB&#39;</span>)</span>
+<span id="cb56-4"><a href="#cb56-4" aria-hidden="true" tabindex="-1"></a>transform_img <span class="op">=</span> transforms.Compose([</span>
+<span id="cb56-5"><a href="#cb56-5" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Define data preparation operations for testing/validation set here.</span></span>
+<span id="cb56-6"><a href="#cb56-6" aria-hidden="true" tabindex="-1"></a>        transforms.Resize(<span class="dv">256</span>),</span>
+<span id="cb56-7"><a href="#cb56-7" aria-hidden="true" tabindex="-1"></a>        transforms.CenterCrop(<span class="dv">224</span>),</span>
+<span id="cb56-8"><a href="#cb56-8" aria-hidden="true" tabindex="-1"></a>        transforms.ToTensor(),</span>
+<span id="cb56-9"><a href="#cb56-9" aria-hidden="true" tabindex="-1"></a>        transforms.Normalize([<span class="fl">0.485</span>, <span class="fl">0.456</span>, <span class="fl">0.406</span>], [<span class="fl">0.229</span>, <span class="fl">0.224</span>, <span class="fl">0.225</span>]) <span class="co"># ImageNet prior</span></span>
+<span id="cb56-10"><a href="#cb56-10" aria-hidden="true" tabindex="-1"></a>    ])</span>
+<span id="cb56-11"><a href="#cb56-11" aria-hidden="true" tabindex="-1"></a>input_img <span class="op">=</span> transform_img(img)</span>
+<span id="cb56-12"><a href="#cb56-12" aria-hidden="true" tabindex="-1"></a>input_img <span class="op">=</span> input_img.unsqueeze_(<span class="dv">0</span>)</span>
+<span id="cb56-13"><a href="#cb56-13" aria-hidden="true" tabindex="-1"></a>input_img <span class="op">=</span>input_img.to(<span class="st">&#39;cpu&#39;</span>)</span></code></pre>
+    </div>
+  </div>
+  <div class="cell code" data-execution_count="74">
+    <div class="sourceCode" id="cb57">
+      <pre
+        class="sourceCode python"><code class="sourceCode python"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a><span class="bu">type</span>(input_img)</span></code></pre>
+    </div>
+    <div class="output execute_result" data-execution_count="74">
+      <pre><code>torch.Tensor</code></pre>
+    </div>
+  </div>
+  <div class="cell code" data-execution_count="75">
+    <div class="sourceCode" id="cb59">
+      <pre
+        class="sourceCode python"><code class="sourceCode python"><span id="cb59-1"><a href="#cb59-1" aria-hidden="true" tabindex="-1"></a>ort_inputs <span class="op">=</span> {ort_session.get_inputs()[<span class="dv">0</span>].name: to_numpy(input_img)}</span></code></pre>
+    </div>
+  </div>
+  <div class="cell code" data-execution_count="76">
+    <div class="sourceCode" id="cb60">
+      <pre
+        class="sourceCode python"><code class="sourceCode python"><span id="cb60-1"><a href="#cb60-1" aria-hidden="true" tabindex="-1"></a>ort_outs <span class="op">=</span> ort_session.run(<span class="va">None</span>, ort_inputs)</span></code></pre>
+    </div>
+  </div>
+  <div class="cell code" data-execution_count="77">
+    <div class="sourceCode" id="cb61">
+      <pre
+        class="sourceCode python"><code class="sourceCode python"><span id="cb61-1"><a href="#cb61-1" aria-hidden="true" tabindex="-1"></a>ort_outs</span></code></pre>
+    </div>
+    <div class="output execute_result" data-execution_count="77">
+      <pre><code>[array([[ 5.582136 ,  5.463295 , -6.272268 , -0.6216311, -4.644254 ]],
+       dtype=float32)]</code></pre>
+    </div>
+  </div>
+  <div class="cell code" data-execution_count="78">
+    <div class="sourceCode" id="cb63">
+      <pre
+        class="sourceCode python"><code class="sourceCode python"><span id="cb63-1"><a href="#cb63-1" aria-hidden="true" tabindex="-1"></a>output_tensors <span class="op">=</span> torch.FloatTensor(ort_outs[<span class="dv">0</span>])</span>
+<span id="cb63-2"><a href="#cb63-2" aria-hidden="true" tabindex="-1"></a>_, preds <span class="op">=</span> torch.<span class="bu">max</span>(output_tensors, <span class="dv">1</span>)</span></code></pre>
+    </div>
+  </div>
+  <div class="cell code" data-execution_count="79">
+    <div class="sourceCode" id="cb64">
+      <pre
+        class="sourceCode python"><code class="sourceCode python"><span id="cb64-1"><a href="#cb64-1" aria-hidden="true" tabindex="-1"></a>preds<span class="op">=</span> preds.numpy()</span></code></pre>
+    </div>
+  </div>
+  <div class="cell code" data-execution_count="80">
+    <div class="sourceCode" id="cb65">
+      <pre
+        class="sourceCode python"><code class="sourceCode python"><span id="cb65-1"><a href="#cb65-1" aria-hidden="true" tabindex="-1"></a>class_names[preds[<span class="dv">0</span>]]</span></code></pre>
+    </div>
+    <div class="output execute_result" data-execution_count="80">
+      <pre><code>&#39;Hokkien Prawn Mee&#39;</code></pre>
+    </div>
+  </div>
+  <div class="cell code">
+    <div class="sourceCode" id="cb67">
+      <pre class="sourceCode python"><code class="sourceCode python"></code></pre>
+    </div>
+  </div>
+</body>
+
+</html>
